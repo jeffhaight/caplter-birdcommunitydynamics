@@ -49,25 +49,24 @@ library(GLMMadaptive)   # for calculating VIF for 'glmmTMB' models
 
 # Import Data
 ```{r, include = FALSE}
-list.files("./data")
+list.files("~/GitHub/caplter-birdcommunitydynamics/data")
 ```
 ### Bird species traits
 ```{r, echo = TRUE}
-birdtraits.all <- read.csv("./data/traits/birdtraits_corebirds2024.csv")
+birdtraits.all <- read.csv("~/GitHub/caplter-birdcommunitydynamics/data/traits/birdtraits_corebirds2024.csv")
 # birdtraits.all$SeedDisperser <- as.factor(birdtraits.all$SeedDisperser)
-
 
 
 ```
 
 ### Species observation data
 ```{r import species obs data, echo = TRUE, message = FALSE}
-obs.all <- read.csv("./data/bird_observations_countmeanbyseason.csv", header = TRUE)
+obs.all <- read.csv("~/GitHub/caplter-birdcommunitydynamics/data/spp/bird_observations_countmeanbyseason.csv", header = TRUE)
 #str(obs.all)
 
 # the abundance data for each bird count (by-survey)
-  bird.counts <- readRDS("./data/bird_observations_countbysurvey.rds")
-  K <- readRDS("./data/bird_observations_surveycount.rds")
+  bird.counts <- readRDS("~/GitHub/caplter-birdcommunitydynamics/data/spp/bird_observations_countbysurvey.rds")
+  K <- readRDS("~/GitHub/caplter-birdcommunitydynamics/data/spp/bird_observations_surveycount.rds")
 
 ```
 
@@ -211,6 +210,27 @@ bird.counts.mean[is.nan(bird.counts.mean)== TRUE] <- NA
     
     
 obs %>% filter(code == "ABTO") %>% summarize(n_site = length(site_code), .by = c(survey_year, season)) %>% arrange(n_site)
+```
+### Site and survey summary
+```{r}
+# number of survey days per site, per season
+(n.survey <- obs %>%
+  group_by(site_code, location_type, survey_year, season, year_season, code) %>%
+  filter(code == "ABTO") %>% 
+  summarize(n_survey = length(season)) %>% select(-code) %>% arrange(n_survey, survey_year))
+
+# number of observers per site, per season
+(n.observers <- obs %>%
+  group_by(site_code, location_type, survey_year, season, year_season, code) %>%
+  filter(code == "ABTO") %>% summarize(n_observers = length(unique(observer))) %>% select(-code) #%>% 
+    # arrange(n_observers, survey_year)
+  )
+
+mean(n.observers$n_observers)
+hist(n.observers$n_observers)
+max(n.observers$n_observers)
+min(n.observers$n_observers)
+sd(n.observers$n_observers)
 ```
 
 
@@ -839,7 +859,7 @@ rm(
   beta.s, beta.t, beta.mean, beta.sd,
   spe, time_lag_yr, crs.utm
 )
-save.image(file = "./data/modelinputs_CAPbirds2024.RData")
+save.image(file = "~/GitHub/caplter-birdcommunitydynamics/data/modelinputs_CAPbirds2024.RData")
 ```
 
 

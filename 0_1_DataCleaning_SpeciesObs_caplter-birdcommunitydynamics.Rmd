@@ -881,14 +881,18 @@ obs <- obs %>% filter(!survey_id %in% c(
   # so we can't assume that counts from one survey ID are distinct individuals from the other survey ID
   # and thus we get the maximum count for each species
   # we've already gotten the total number of each species per survey ID, so we just need to get the max count per day
+  
+  
   obs.date <- obs.surveyID %>% #arrange(survey_id, code) %>% 
     group_by(site_code, survey_date, code, common_name) %>%
-    summarize(bird_count = max(bird_count, na.rm = TRUE)) %>% ungroup()
+    # summarize(bird_count = max(bird_count, na.rm = TRUE)) %>% 
+    arrange(desc(bird_count)) %>% slice(1) %>%  # this way will preserve the observer identity
+    ungroup() 
   obs.date %>% arrange(survey_date, code) 
   
   nrow(obs.surveyID); nrow(obs.date) 
   # the difference between these indicate that there were previously ~40 species observations recorded under multiple survey IDs on the same date 
-  # but those have now been aggregated
+  # but those have now been filtered out
 ```
 
 
@@ -1033,6 +1037,8 @@ obs.all %>% group_by(site_code) %>%
 # obs.all %>% filter(site_code == "U-21")
 
 ```
+```{r}
+```
 
 
 
@@ -1048,11 +1054,27 @@ surveydays %>% count(site_code, survey_year, season) %>% nrow()
 # because there were ~2-4 surveys per season
 # however, most sites were not surveyed across the full study period
 
+obs.all %>%
+  group_by(site_code, location_type, survey_year, season, year_season, code) %>%
+  filter(code == "ABTO") %>% arrange(observer, site_code, survey_year, season)
+
 # number of survey days per site, per season
 (n.survey <- obs.all %>%
   group_by(site_code, location_type, survey_year, season, year_season, code) %>%
-  filter(code == "ABTO") %>% summarize(n_survey = length(season)) %>% select(-code) %>% arrange(n_survey, survey_year))
+  filter(code == "ABTO") %>% 
+  summarize(n_survey = length(season)) %>% select(-code) %>% arrange(n_survey, survey_year))
 
+(n.observers <- obs.all %>%
+  group_by(site_code, location_type, survey_year, season, year_season, code) %>%
+  filter(code == "ABTO") %>% summarize(n_observers = length(unique(observer))) %>% select(-code) #%>% 
+    # arrange(n_observers, survey_year)
+  )
+
+mean(n.observers$n_observers)
+hist(n.observers$n_observers)
+max(n.observers$n_observers)
+min(n.observers$n_observers)
+sd(n.observers$n_observers)
 
 # tmp <- surveydays %>% group_by(site_code, survey_year, season) %>% dplyr::select(-c(yday, survey_date, site_date))# %>% 
 #   filter(row_number() == 1) %>% ungroup()

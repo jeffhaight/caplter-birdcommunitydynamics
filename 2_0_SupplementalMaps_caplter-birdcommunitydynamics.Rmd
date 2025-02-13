@@ -1,0 +1,600 @@
+---
+title: "CAP Birds and Arthropods - Preparing Site Data for Analysis"
+author: ```{r}
+
+```
+effrey Haight et al."
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list = ls())
+gc()
+```
+
+```{r packages, message = FALSE, echo = TRUE, warning = FALSE}
+  library(tidyverse)
+  library(beepr)  # for notifying you when some code is  done running
+
+# for spatial data
+  library(sf)
+  library(terra)
+  library(tidyverse)
+  library(tidyterra)
+
+
+# for plotting
+# library(ggplot2)      # should already be in the 'tidyverse'
+  library(ggpubr)       # for adding correlations and p-values to ggplot
+  library(ggeffects)    # for plotting glmm effects in ggplot
+  library(ggcorrplot)   # for correlation plots
+  library(GGally)       # similar to ggcorrplot
+  library(gghighlight)  # for highlighting groups in ggplot
+  library(RColorBrewer)
+  library(scales)
+  library(lterpalettefinder)
+```
+
+
+
+```{r import study area}
+
+# UTM 12N = ESPG:32612
+cap <- st_read("C:/Research/CAPLTER/data/spatial/cap_boundary_Project/cap_boundary_Project.shp") 
+
+# define projections based on these two layers
+# crs.aea <- crs(is16.full)
+crs.utm <- crs(vect(st_geometry(cap)))
+
+# get extents  
+# bb.cap <- st_as_sfc(st_bbox(cap)) %>% st_transform(crs.aea)
+# cap.aea <- cap %>% st_transform(crs.aea)
+
+# coerce the CAP site geometry into SpatVector object, for working with SpatRasters
+#(cap.mask <- vect(st_geometry(cap)))  # a mask based on just the study area boundary
+# (cap.mask <- vect(bb.cap))            # a mask based on the extent of the study area
+
+
+bird.pts <- st_read("C:/Research/CAPLTER/data/core_birds/46_bird_survey_locations_updated.shp") %>% st_transform(crs.utm) %>%
+  dplyr::select(-c("begin_date", "begin_mon", "begin_year", "end_date", "end_mon", "end_year")) # drop the time columns, since we'll get this from the bird data itself
+```
+# Impervious Surface (NDBI) Maps
+```{r warning = FALSE}
+list.files("C:/Research/CAPLTER/data/spatial/longtermenv/_NDBI")
+setwd("C:/Research/CAPLTER/data/spatial/longtermenv/_NDBI")
+c(rast("./NDBI_multiseason_CAPLTER_2001.tif"), rast("./NDBI_multiseason_CAPLTER_2002.tif"))[[7]]
+
+ndbi <- c(rast("./NDBI_multiseason_CAPLTER_2001.tif")[[-1]],
+         # rast("./NDBI_multiseason_CAPLTER_2002.tif")[[-1]],
+         # rast("./NDBI_multiseason_CAPLTER_2003.tif")[[-1]],
+         rast("./NDBI_multiseason_CAPLTER_2004.tif")[[-1]],
+         # rast("./NDBI_multiseason_CAPLTER_2005.tif")[[-1]],
+         # rast("./NDBI_multiseason_CAPLTER_2006.tif")[[-1]],
+         rast("./NDBI_multiseason_CAPLTER_2007.tif")[[-1]],
+         # rast("./NDBI_multiseason_CAPLTER_2008.tif")[[-1]],
+         # rast("./NDBI_multiseason_CAPLTER_2009.tif")[[-1]],
+         rast("./NDBI_multiseason_CAPLTER_2010.tif")[[-1]],
+         # rast("./NDBI_multiseason_CAPLTER_2011.tif")[[-1]],
+         # rast("./NDBI_multiseason_CAPLTER_2012.tif")[[-1]],
+         rast("./NDBI_multiseason_CAPLTER_2013.tif")[[-1]],
+         # rast("./NDBI_multiseason_CAPLTER_2014.tif")[[-1]],
+         # rast("./NDBI_multiseason_CAPLTER_2015.tif")[[-1]],
+         rast("./NDBI_multiseason_CAPLTER_2016.tif")[[-1]]
+         )
+# names(ndbi) <- paste(names(ppt), rep(c("2001","2016"), each = 4), sep = "_")
+# names(ndbi) <- paste(c("Winter", "Spring", "Summer", "Fall"), rep(c(2001, 2008, 2016), each = 4), sep = "_")
+names(ndbi) <- paste(c("Winter", "Spring", "Summer", "Fall"), rep(c(2001, 2004, 2007, 2010, 2013, 2016), each = 4), sep = "_")
+
+
+
+ggplot() +
+  # theme_minimal()+
+    theme_classic() +
+  geom_spatraster(data = ndbi, aes(fill = Winter_2001)) +
+  scale_fill_distiller(palette = "Greys", direction = 1, na.value = "transparent", 
+                       limits = c(-0.2, 0.4)) +
+  # geom_sf(data = bird.pts, size = 0.8, col = "black", fill = "transparent") +
+  # geom_sf(data = bird.pts, size = 0.5, col = "white", fill = "transparent") +
+  labs(fill = "NDBI") +
+  theme(
+    strip.background = element_blank(),
+    strip.text.x = element_blank(),,
+    # axis.title = element_text(face = "bold", size = 16)
+    axis.text.x = element_text(angle = 45, vjust = 0.6, size = 8),
+    axis.text.y = element_text(size = 8),
+    legend.title = element_text(face = "bold")
+  ) 
+```
+
+
+```{r}
+  
+plot.ndbi.all <- ggplot() +
+  # theme_minimal()+
+    theme_classic() +
+  geom_spatraster(data = ndvi) +
+  facet_wrap(~lyr, ncol = 4) +
+  scale_fill_distiller(palette = "Greys", direction = 1, na.value = "transparent", 
+                       limits = c(-0.2, 0.4)) +
+  # geom_sf(data = bird.pts, size = 0.3, col = "black", fill = "transparent") +
+  # geom_sf(data = bird.pts, size = 0.05, col = "white", fill = "transparent") +
+  labs(fill = "NDBI") +
+  theme(
+    strip.background = element_blank(),
+    strip.text.x = element_blank(),
+    legend.position = "none",
+    # axis.title = element_text(face = "bold", size = 16)
+    axis.text.x = element_text(angle = 45, vjust = 0.6, size = 8),
+    axis.text.y = element_text(size = 8),
+    legend.title = element_text(face = "bold")
+  ) 
+
+# plot.ndvi.all
+ggsave("H:/Shared drives/CAP USE Postdoc/projects/biodiversitydynamics/figures/trends_env/map_NDBI_multiyear.png",
+       plot.ndbi.all,
+       width = 6,
+       height = 6,
+       units = "in",
+       dpi = 300)
+
+beep()
+```
+
+# Vegetation (NDVI) Maps
+```{r}
+list.files("./NDVI")
+c(rast("./NDVI/NDVI_multiseason_CAPLTER_2001.tif"), rast("./NDVI/NDVI_multiseason_CAPLTER_2002.tif"))[[7]]
+
+ndvi <- c(rast("./NDVI/NDVI_multiseason_CAPLTER_2001.tif")[[-1]],
+         # rast("./NDVI/NDVI_multiseason_CAPLTER_2002.tif")[[-1]],
+         # rast("./NDVI/NDVI_multiseason_CAPLTER_2003.tif")[[-1]],
+         rast("./NDVI/NDVI_multiseason_CAPLTER_2004.tif")[[-1]],
+         # rast("./NDVI/NDVI_multiseason_CAPLTER_2005.tif")[[-1]],
+         # rast("./NDVI/NDVI_multiseason_CAPLTER_2006.tif")[[-1]],
+         rast("./NDVI/NDVI_multiseason_CAPLTER_2007.tif")[[-1]],
+         # rast("./NDVI/NDVI_multiseason_CAPLTER_2008.tif")[[-1]],
+         # rast("./NDVI/NDVI_multiseason_CAPLTER_2009.tif")[[-1]],
+         rast("./NDVI/NDVI_multiseason_CAPLTER_2010.tif")[[-1]],
+         # rast("./NDVI/NDVI_multiseason_CAPLTER_2011.tif")[[-1]],
+         # rast("./NDVI/NDVI_multiseason_CAPLTER_2012.tif")[[-1]],
+         rast("./NDVI/NDVI_multiseason_CAPLTER_2013.tif")[[-1]],
+         # rast("./NDVI/NDVI_multiseason_CAPLTER_2014.tif")[[-1]],
+         # rast("./NDVI/NDVI_multiseason_CAPLTER_2015.tif")[[-1]],
+         rast("./NDVI/NDVI_multiseason_CAPLTER_2016.tif")[[-1]]
+         )
+# names(ppt) <- paste(names(ppt), rep(c("2001","2016"), each = 4), sep = "_")
+# names(ndvi) <- paste(c("Winter", "Spring", "Summer", "Fall"), rep(c(2001, 2008, 2016), each = 4), sep = "_")
+names(ndvi) <- paste(c("Winter", "Spring", "Summer", "Fall"), rep(c(2001, 2004, 2007, 2010, 2013, 2016), each = 4), sep = "_")
+
+
+
+ggplot() +
+  # theme_minimal()+
+    theme_classic() +
+  geom_spatraster(data = ndvi, aes(fill = Winter_2001)) +
+  scale_fill_viridis_c(option = "viridis", direction = 1, na.value = "transparent", limits = c(-0.0, 0.7), oob = scales::squish) +
+  geom_sf(data = bird.pts, size = 0.8, col = "black", fill = "transparent") +
+  geom_sf(data = bird.pts, size = 0.5, col = "white", fill = "transparent") +
+  labs(fill = "NDVI") +
+  theme(
+    strip.background = element_blank(),
+    strip.text.x = element_blank(),,
+    # axis.title = element_text(face = "bold", size = 16)
+    axis.text.x = element_text(angle = 45, vjust = 0.6, size = 8),
+    axis.text.y = element_text(size = 8),
+    legend.title = element_text(face = "bold")
+  ) 
+```
+
+```{r}
+  
+plot.ndvi.all <- ggplot() +
+  # theme_minimal()+
+    theme_classic() +
+  geom_spatraster(data = ndvi) +
+  facet_wrap(~lyr, ncol = 4) +
+  scale_fill_viridis_c(option = "viridis", direction = 1, na.value = "transparent", limits = c(-0.0, 0.7), oob = scales::squish) +
+  # geom_sf(data = bird.pts, size = 0.3, col = "black", fill = "transparent") +
+  # geom_sf(data = bird.pts, size = 0.05, col = "white", fill = "transparent") +
+  labs(fill = "NDVI") +
+  theme(
+    strip.background = element_blank(),
+    strip.text.x = element_blank(),
+    legend.position = "none",
+    # axis.title = element_text(face = "bold", size = 16)
+    axis.text.x = element_text(angle = 45, vjust = 0.6, size = 8),
+    axis.text.y = element_text(size = 8),
+    legend.title = element_text(face = "bold")
+  ) 
+
+# plot.ndvi.all
+ggsave("H:/Shared drives/CAP USE Postdoc/projects/biodiversitydynamics/figures/trends_env/map_NDVI_multiyear.png",
+       plot.ndvi.all,
+       width = 6,
+       height = 6,
+       units = "in",
+       dpi = 300)
+```
+
+# Land Surface Temperature (LST) Maps
+```{r}
+list.files("./LST")
+c(rast("./LST/LST_multiseason_CAPLTER_2001.tif"), rast("./LST/LST_multiseason_CAPLTER_2002.tif"))[[7]]
+
+LST <- c(rast("./LST/LST_multiseason_CAPLTER_2001.tif")[[-1]],
+         # rast("./LST/LST_multiseason_CAPLTER_2002.tif")[[-1]],
+         # rast("./LST/LST_multiseason_CAPLTER_2003.tif")[[-1]],
+         rast("./LST/LST_multiseason_CAPLTER_2004.tif")[[-1]],
+         # rast("./LST/LST_multiseason_CAPLTER_2005.tif")[[-1]],
+         # rast("./LST/LST_multiseason_CAPLTER_2006.tif")[[-1]],
+         rast("./LST/LST_multiseason_CAPLTER_2007.tif")[[-1]],
+         # rast("./LST/LST_multiseason_CAPLTER_2008.tif")[[-1]],
+         # rast("./LST/LST_multiseason_CAPLTER_2009.tif")[[-1]],
+         rast("./LST/LST_multiseason_CAPLTER_2010.tif")[[-1]],
+         # rast("./LST/LST_multiseason_CAPLTER_2011.tif")[[-1]],
+         # rast("./LST/LST_multiseason_CAPLTER_2012.tif")[[-1]],
+         rast("./LST/LST_multiseason_CAPLTER_2013.tif")[[-1]],
+         # rast("./LST/LST_multiseason_CAPLTER_2014.tif")[[-1]],
+         # rast("./LST/LST_multiseason_CAPLTER_2015.tif")[[-1]],
+         rast("./LST/LST_multiseason_CAPLTER_2016.tif")[[-1]]
+         )
+# names(LST) <- paste(names(ppt), rep(c("2001","2016"), each = 4), sep = "_")
+# names(LST) <- paste(c("Winter", "Spring", "Summer", "Fall"), rep(c(2001, 2008, 2016), each = 4), sep = "_")
+names(LST) <- paste(c("Winter", "Spring", "Summer", "Fall"), rep(c(2001, 2004, 2007, 2010, 2013, 2016), each = 4), sep = "_")
+
+
+
+ggplot() +
+  # theme_minimal()+
+    theme_classic() +
+  geom_spatraster(data = LST, aes(fill = Winter_2001)) +
+  scale_fill_distiller(palette = "RdYlBu", direction = -1, na.value = "transparent", 
+                       limits = c(10, 60), oob = scales::squish) +
+  # geom_sf(data = bird.pts, size = 0.8, col = "black", fill = "transparent") +
+  # geom_sf(data = bird.pts, size = 0.5, col = "white", fill = "transparent") +
+  labs(fill = "LST (°C)") +
+  theme(
+    strip.background = element_blank(),
+    strip.text.x = element_blank(),,
+    # axis.title = element_text(face = "bold", size = 16)
+    axis.text.x = element_text(angle = 45, vjust = 0.6, size = 8),
+    axis.text.y = element_text(size = 8),
+    legend.title = element_text(face = "bold")
+  ) 
+```
+
+
+```{r}
+  
+plot.LST.all <- ggplot() +
+  # theme_minimal()+
+    theme_classic() +
+  geom_spatraster(data = LST) +
+  facet_wrap(~lyr, ncol = 4) +
+  scale_fill_distiller(palette = "RdYlBu", direction = -1, na.value = "transparent", 
+                       limits = c(10, 60), oob = scales::squish) +
+  # geom_sf(data = bird.pts, size = 0.3, col = "black", fill = "transparent") +
+  # geom_sf(data = bird.pts, size = 0.05, col = "white", fill = "transparent") +
+  labs(fill = "LST (°C)") +
+  theme(
+    strip.background = element_blank(),
+    strip.text.x = element_blank(),
+    legend.position = "none",
+    # axis.title = element_text(face = "bold", size = 16)
+    axis.text.x = element_text(angle = 45, vjust = 0.6, size = 8),
+    axis.text.y = element_text(size = 8),
+    legend.title = element_text(face = "bold")
+  ) 
+
+# plot.ndvi.all
+ggsave("H:/Shared drives/CAP USE Postdoc/projects/biodiversitydynamics/figures/trends_env/map_LST_multiyear.png",
+       plot.LST.all,
+       width = 6,
+       height = 6,
+       units = "in",
+       dpi = 300)
+```
+
+# Precipitation Maps
+```{r import precipitation data}
+
+list.files("./Daymet/ppt_sum")
+ppt <- c(rast("./Daymet/ppt_sum/ppt_sum_multiseason_CAPLTER_Daymet_2001.tif")[[-1]],
+         # rast("./Daymet/ppt_sum/ppt_sum_multiseason_CAPLTER_Daymet_2002.tif")[[-1]],
+         # rast("./Daymet/ppt_sum/ppt_sum_multiseason_CAPLTER_Daymet_2003.tif")[[-1]],
+         rast("./Daymet/ppt_sum/ppt_sum_multiseason_CAPLTER_Daymet_2004.tif")[[-1]],
+         # rast("./Daymet/ppt_sum/ppt_sum_multiseason_CAPLTER_Daymet_2005.tif")[[-1]],
+         # rast("./Daymet/ppt_sum/ppt_sum_multiseason_CAPLTER_Daymet_2006.tif")[[-1]],
+         rast("./Daymet/ppt_sum/ppt_sum_multiseason_CAPLTER_Daymet_2007.tif")[[-1]],
+         # rast("./Daymet/ppt_sum/ppt_sum_multiseason_CAPLTER_Daymet_2008.tif")[[-1]],
+         # rast("./Daymet/ppt_sum/ppt_sum_multiseason_CAPLTER_Daymet_2009.tif")[[-1]],
+         rast("./Daymet/ppt_sum/ppt_sum_multiseason_CAPLTER_Daymet_2010.tif")[[-1]],
+         # rast("./Daymet/ppt_sum/ppt_sum_multiseason_CAPLTER_Daymet_2011.tif")[[-1]],
+         # rast("./Daymet/ppt_sum/ppt_sum_multiseason_CAPLTER_Daymet_2012.tif")[[-1]],
+         rast("./Daymet/ppt_sum/ppt_sum_multiseason_CAPLTER_Daymet_2013.tif")[[-1]],
+         # rast("./Daymet/ppt_sum/ppt_sum_multiseason_CAPLTER_Daymet_2014.tif")[[-1]],
+         # rast("./Daymet/ppt_sum/ppt_sum_multiseason_CAPLTER_Daymet_2015.tif")[[-1]],
+         rast("./Daymet/ppt_sum/ppt_sum_multiseason_CAPLTER_Daymet_2016.tif")[[-1]]
+         )
+# names(ppt) <- paste(names(ppt), rep(c("2001","2016"), each = 4), sep = "_")
+# names(ppt) <- paste(c("Winter", "Spring", "Summer", "Fall"), rep(c(2001, 2008, 2016), each = 4), sep = "_")
+names(ppt) <- paste(c("Winter", "Spring", "Summer", "Fall"), rep(c(2001, 2004, 2007, 2010, 2013, 2016), each = 4), sep = "_")
+ 
+ggplot() +
+  # theme_minimal()+
+    theme_classic() +
+  geom_spatraster(data = ppt, aes(fill = Winter_2001)) +
+  scale_fill_viridis_c(option = "viridis", direction = -1, 
+                       na.value = "transparent", limits = c(0, 250), oob = scales::squish) +
+  # geom_sf(data = cap, col = "black", fill = "transparent") +
+  geom_sf(data = bird.pts, size = 0.5, col = "black", fill = "transparent") +
+  labs(fill = "Precipitation \n(mm)") +
+  theme(
+    strip.background = element_blank(),
+    strip.text.x = element_blank(),
+    axis.text.x = element_text(angle = 45, vjust = 0.6)
+  )
+  
+ 
+  
+```
+```{r}
+plot.ppt.all <- ggplot() +
+  # theme_minimal()+
+    theme_classic() +
+  geom_spatraster(data = ppt) +
+  facet_wrap(~lyr, ncol = 4) +
+  scale_fill_viridis_c(option = "viridis", direction = -1, 
+                       na.value = "transparent", limits = c(0, 250), oob = scales::squish) +
+  # geom_sf(data = bird.pts, size = 0.3, col = "black", fill = "transparent") +
+  # geom_sf(data = bird.pts, size = 0.05, col = "white", fill = "transparent") +
+  labs(fill = "Precipitation \n(mm)") +
+  theme(
+    strip.background = element_blank(),
+    strip.text.x = element_blank(),
+    legend.position = "none",
+    # axis.title = element_text(face = "bold", size = 16)
+    axis.text.x = element_text(angle = 45, vjust = 0.6, size = 8),
+    axis.text.y = element_text(size = 8),
+    legend.title = element_text(face = "bold")
+  ) 
+# , limits = c(0, 400)
+# 
+# ggplot() +
+#   # theme_minimal()+
+#     theme_classic() +
+#   geom_spatraster(data = ppt) +
+#   facet_wrap(~lyr, ncol = 4) +
+#   scale_fill_viridis_c(option = "viridis", direction = -1, na.value = "transparent") +
+#   # geom_sf(data = cap, col = "black", fill = "transparent") +
+#   geom_sf(data = bird.pts, size = 0.5, col = "black", fill = "transparent") +
+#   labs(fill = "Precipitation \n(mm)") +
+#   theme(
+#     strip.background = element_blank(),
+#     strip.text.x = element_blank(),
+#     axis.text.x = element_text(angle = 40, vjust = 0.6)
+#   )
+
+ggsave("H:/Shared drives/CAP USE Postdoc/projects/biodiversitydynamics/figures/trends_env/map_ppt_multiyear.png",
+       plot.ppt.all,
+       width = 6,
+       height = 6,
+       units = "in",
+       dpi = 300)
+```
+
+
+# BONUS
+```{r import landcover and study area}
+# these are the main two datasets that will define the scale of the analysis
+
+#naip <- rast()
+
+# NLCD Imperviousness
+# nlcd.full <- rast("C:/Research/landcover/NLCD_2019_Land_Cover_CONUS/nlcd_2019_land_cover_l48_20210604.img")
+is16.full <- rast("C:/Research/data/landcover/nlcd_2016_impervious_l48/nlcd_2016_impervious_l48_20210604.img")
+
+is <- c(
+  rast("C:/Research/CAPLTER/data/spatial/NLCD/impervious/NLCD_IS_2001_CAPLTER.tif"),
+  rast("C:/Research/CAPLTER/data/spatial/NLCD/impervious/NLCD_IS_2004_CAPLTER.tif"),
+  rast("C:/Research/CAPLTER/data/spatial/NLCD/impervious/NLCD_IS_2006_CAPLTER.tif"),
+  rast("C:/Research/CAPLTER/data/spatial/NLCD/impervious/NLCD_IS_2008_CAPLTER.tif"),
+  rast("C:/Research/CAPLTER/data/spatial/NLCD/impervious/NLCD_IS_2011_CAPLTER.tif"),
+  rast("C:/Research/CAPLTER/data/spatial/NLCD/impervious/NLCD_IS_2013_CAPLTER.tif"),
+  rast("C:/Research/CAPLTER/data/spatial/NLCD/impervious/NLCD_IS_2016_CAPLTER.tif"),
+  rast("C:/Research/CAPLTER/data/spatial/NLCD/impervious/NLCD_IS_2019_CAPLTER.tif"),
+  rast("C:/Research/CAPLTER/data/spatial/NLCD/impervious/NLCD_IS_2021_CAPLTER.tif")
+  )
+is
+names(is) <- c("is2001", "is2004", "is2006", "is2008", "is2011", "is2013", "is2016", "is2019", "is2021")
+# Examples of how to subset a raster by layer number or name
+# is %>% subset(c(1,9))
+# is %>% subset(c("is01", "is21"))
+
+# yearly NDVI
+  ndvi <- rast("C:/Research/CAPLTER/data/spatial/NDVI/NDVI_CAPLTER_1984to2023_multiband.tif")
+  
+  ggplot() +
+  geom_raster(data = ndvi[[40]],
+              aes(x = x, y = y))
+
+# UTM 12N = ESPG:32612
+cap <- st_read("C:/Research/CAPLTER/data/spatial/cap_boundary_Project/cap_boundary_Project.shp") 
+
+# define projections based on these two layers
+crs.aea <- crs(is16.full)
+crs.utm <- crs(vect(st_geometry(cap)))
+
+# get extents  
+bb.cap <- st_as_sfc(st_bbox(cap)) %>% st_transform(crs.aea)
+cap.aea <- cap %>% st_transform(crs.aea)
+
+# coerce the CAP site geometry into SpatVector object, for working with SpatRasters
+#(cap.mask <- vect(st_geometry(cap)))  # a mask based on just the study area boundary
+(cap.mask <- vect(bb.cap))            # a mask based on the extent of the study area
+
+```
+```{r import census data}
+#https://walker-data.com/tidycensus/articles/spatial-data.html
+tract16 <- get_acs(
+  state = "AZ",
+  county = "Maricopa",
+  geography = "tract",
+  variables = "B19013_001",  # median household income
+  geometry = TRUE,
+  year = 2016
+) %>% st_transform(crs.utm)
+
+bg16 <- get_acs(
+  state = "AZ",
+  county = "Maricopa",
+  geography = "block group",
+  variables = "B19013_001",
+  geometry = TRUE,
+  year = 2016
+) %>% st_transform(crs.utm)
+
+# var16 <- load_variables(2016, "acs1")
+# View(var16)
+
+# the extent of Maricopa County
+bb.maricopa <- st_as_sfc(st_bbox(bg16)) %>% st_transform(crs.aea)
+```
+
+
+```{r import bird points and spatial data}
+bird.pts <- st_read("C:/Research/CAPLTER/data/core_birds/46_bird_survey_locations_updated.shp") %>% st_transform(crs.utm) %>%
+  dplyr::select(-c("begin_date", "begin_mon", "begin_year", "end_date", "end_mon", "end_year")) # drop the time columns, since we'll get this from the bird data itself
+
+# bird.pts %>%
+#   #filter(loc_type == "ESCA") %>%
+#   arrange(site_code, loc_type)) %>% 
+#   group_by(site_code, loc_type, lat, long) #%>% filter(is.na(end_year) == FALSE) #%>% filter(row_number() == 1)
+
+# If you are using the original shapefile, there will be some sites with duplicated coordinates
+  # names of sites with two sets coordinates. If using the 'updated' shapefile, this should yield nothing:
+  # (pts.dupl <- bird.pts %>% count(site_code) %>% filter(n > 1) %>% pull(site_code))
+  # over the years, some point count locations were updated very slightly (<30 m but >5 m); most of these changes occurred in 2016
+  # we can remove all these duplicated site that have an end year of 2016 (i.e. use the most current site location)
+  # there was one exception to this: there are two locations for W-17 
+  # this site was discontinued in changed in 2013 and discontinued in 2016
+  # pts.dupl <- pts.dupl[!pts.dupl %in% c("W-17")] # leave out W-17 and we'll drop it manually
+
+  # drop these duplicated points
+  # bird.pts <- bird.pts[-which(bird.pts$site_code %in% pts.dupl & is.na(bird.pts$end_year) == FALSE),] 
+  # bird.pts <- bird.pts[-which(bird.pts$site_code == "W-17" & bird.pts$end_year == "2012"),]
+
+# Create a 1000 m buffer around the points
+    bird.pts1000 <- bird.pts %>% st_buffer(dist = 1000) %>% vect()
+
+
+# extract NLCD imperviousness by bird sites
+    bird.pts.nlcd <- bind_cols(
+      bird.pts, 
+      terra::extract(is, bird.pts1000, fun = mean, na.rm = TRUE) )
+    
+    # add some columns for change across NLCD periods
+    bird.pts.nlcd$diff01_11 <- bird.pts.nlcd$is2021 - bird.pts.nlcd$is2001
+    bird.pts.nlcd$diff11_21 <- bird.pts.nlcd$is2021 - bird.pts.nlcd$is2011
+    bird.pts.nlcd$diff01_21 <- bird.pts.nlcd$is2011 - bird.pts.nlcd$is2001
+    #bird.pts
+
+
+# import bird spatial data exported from GEE and merge it with the point dataset
+    bird.gee <- read.csv("H:/Shared drives/CAP USE Postdoc/projects/biodiversitydynamics/data/corebirds_indices_1000m_mean.csv") %>%
+      select(-c(system.index, .geo,
+                blue, green, red, nir, swir1, swir2,  # we don't need the original bands
+                "begin_date", "begin_mon", "begin_year", "end_date", "end_mon", "end_year"
+                ))
+    bird.gee$therm <- bird.gee$therm - 273.15   # adjust therm from Kelvin to Celsius
+    # head(as.Date.POSIXct(bird.gee$datetime))
+
+
+# join the GEE data to the bird locations, creating one spatial dataset
+    bird.spat <- right_join(bird.pts.nlcd, bird.gee)
+
+  
+# rename the seasons to match the biodiversity data
+    bird.spat$season <- as.character(bird.spat$season)
+    bird.spat$season[which(bird.spat$season == "1")] <- "1_winter"
+    bird.spat$season[which(bird.spat$season == "2")] <- "2_spring"
+    str(bird.spat)
+    
+    bird.spat
+```
+
+
+
+```{r import bird diversity data}
+
+# biodiversity data
+  div.loc <- read.csv("H:/Shared drives/CAP USE Postdoc/projects/biodiversitydynamics/data/div_sites_byseason_surveymax.csv")
+  colnames(div.loc)
+  colnames(div.loc) <- c("site_code", "loc_type", "year", "season","count", "n.survey", "abundance", "rich","H", "evenness"   )
+  div.loc <- div.loc %>% filter(season %in% c("1_winter", "2_spring"))  # keep only the winter and spring surveys
+  div.loc %>% drop_na(rich) %>% nrow()
+  
+# Merge with the spatial data, creating one dataset that has the spatial data from all sites and seasons, 
+  # including from seasons when those sites weren't surveyed
+  bird.data <- left_join(bird.spat, div.loc)
+  bird.data #%>% tail()
+  
+  bird.data %>% nrow()
+  div.loc %>% nrow()
+  
+  # If everythin in the merge aligned, these should have the same number
+  bird.data %>% drop_na(rich) %>% nrow()
+  div.loc %>% nrow()
+  
+  # Which variable caused this misalignment?
+  print(unique(bird.spat$site_code) %in% unique(div.loc$site_code))
+  print(unique(bird.spat$loc_type) %in% unique(div.loc$loc_type))
+  print(unique(bird.spat$season) %in% unique(div.loc$season))
+  print(unique(bird.spat$year) %in% unique(div.loc$year))
+  # ah, there is no year 2000 in the bird diversity dataset, so it's okay to drop those years
+  bird.data <- bird.data %>% filter(!year %in% c(2000, 2023) )
+  bird.data %>% drop_na(rich) %>% nrow()
+  div.loc %>% filter(!year == 2023) %>% nrow()
+
+  
+# split the data seasonally and drop the spatial data from periods not surveyed
+  bird.data1 <- bird.data %>% filter(season == "1_winter") %>% drop_na(rich)  
+  bird.data2 <- bird.data %>% filter(season == "2_spring") %>% drop_na(rich)
+```
+
+
+
+```{r merge NLCD ISA with bird diversity data}
+# pts.arth$ie <- 
+is.birds <- bird.data  %>% pivot_longer(
+    cols = starts_with("is"),
+    names_to = "year_NLCD",
+    names_prefix = "is",
+    values_to = "is",
+    values_drop_na = TRUE
+  )
+# filter it to only the years when impervious surface was measured
+is.birds <- is.birds[which(is.birds$year == is.birds$year_NLCD),] %>% drop_na(rich)
+
+
+```
+```{r correlations}
+print("vs. imperviousness")
+cor(is.birds$is, is.birds$NDBI)
+cor(is.birds$is, is.birds$NISI)
+cor(is.birds$is, is.birds$NDISI)
+cor(is.birds$is, is.birds$ENDISI)
+cor(is.birds$is, is.birds$NDVI)
+cor(is.birds$is, is.birds$therm)
+
+print("vs. year")
+cor(is.birds$year, is.birds$NDBI)
+cor(is.birds$year, is.birds$NISI)
+cor(is.birds$year, is.birds$NDISI)
+cor(is.birds$year, is.birds$ENDISI)
+cor(is.birds$year, is.birds$NDVI)
+cor(is.birds$year, is.birds$therm)
+```
