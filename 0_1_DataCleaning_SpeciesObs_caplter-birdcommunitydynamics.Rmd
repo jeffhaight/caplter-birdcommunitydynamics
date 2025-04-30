@@ -336,7 +336,7 @@ obs %>% pull(common_name) %>% unique() %>% length()  # the total number of speci
   
 # list of identified species
   spp.known <- obs %>% filter(!common_name %in% spp.unknown) %>% pull(common_name) %>% unique()
-  length(spp.known); spp.known
+  length(spp.known)#; spp.known
 
   
 # # drop the factor levels
@@ -347,7 +347,7 @@ obs %>% pull(common_name) %>% unique() %>% length()  # the total number of speci
 
 
 ```{r export species list}
-write.csv(bird.list.joined, "C:/Research/CAPLTER/data/core_birds/listofspecies_corebirds.csv", row.names = FALSE)
+write.csv(bird.list.joined, "~/GitHub/caplter-birdcommunitydynamics/data/spp/listofspecies_corebirds.csv", row.names = FALSE)
 ```
 
 ### Filter by Observation Type
@@ -570,7 +570,7 @@ obs %>% filter(!distance %in% c('40+', 'FT')) %>% nrow()
 bird.list.joined %>% filter(code %in% unique(obs$code))
 
 
-write.csv((bird.list.joined %>% filter(code %in% unique(obs$code))), "C:/Research/CAPLTER/data/core_birds/listofspecies_corebirds_nearbyonly.csv", row.names = FALSE)
+write.csv((bird.list.joined %>% filter(code %in% unique(obs$code))), "~/GitHub/caplter-birdcommunitydynamics/data/spp/listofspecies_corebirds_nearbyonly.csv", row.names = FALSE)
 ```
 
 
@@ -682,7 +682,7 @@ surveys$season <- as.factor(surveys$season)
 
 surveys %>% arrange(yday)
 ```
-One quick correction: the original downstream transect at Ave67 was moved up stream of the original upstream transect between the 2016 Winter and Spring surveys. As a consequence, Ave67_mid_B1 became Ave67_dwn_B1 after 2016, but it is exact same site, so we can rename all the Ave67 observations
+One quick correction: the original downstream transect at Ave67 was moved upstream of the original upstream transect between the 2016 Winter and Spring surveys. As a consequence, Ave67_mid_B1 became Ave67_dwn_B1 after 2016, but it is exact same site, so we can rename all the Ave67 observations
 ```{r align Ave67 site codes}
 # Here we can see that there are no 'Ave67_mid' after January 2016 in this dataset,
 # and then the 'Ave67_down' starts in April 2016
@@ -896,10 +896,12 @@ obs <- obs %>% filter(!survey_id %in% c(
 ```
 
 
+
 ```{r join the survey and observation data}
 # first, check the survey info by which the tables will be joined
   obs.date %>% count(site_code, survey_date) %>% nrow()   # n = number of species in each
   surveys %>% count(site_code, survey_date)  %>% nrow()
+  surveys %>% count(site_code, survey_date, observer) %>% filter(n > 1) # cases of multiple surveys by a single observer
   length(unique(obs.date$survey_date)); length(unique(surveys$survey_date))
   length(unique(obs.date$site_code)); length(unique(surveys$site_code))
   length(unique(obs$survey_id)); length(unique(surveys$survey_id))
@@ -927,7 +929,9 @@ obs <- obs %>% filter(!survey_id %in% c(
     data.frame()
   # spp
   
-  surveydays <- surveys %>% group_by(site_code, location_type, survey_date, yday, survey_year, season) %>% 
+  surveydays <- surveys %>% group_by(site_code, location_type, survey_date, yday, survey_year,
+                                     #observer, 
+                                     season) %>% 
     summarize(survey_count = length(season)) %>% 
     arrange(survey_date, site_code) %>%
     #arrange(desc(survey_count)) %>%
@@ -948,7 +952,7 @@ obs <- obs %>% filter(!survey_id %in% c(
     "season" = rep(surveydays$season, each = nrow(spp)),
     #"time_start" = rep(surveys$time_start, each = nrow(spp)),
     #"time_end" = rep(surveys$time_end, each = nrow(spp)),
-    #"observer" = rep(surveys$observer, each = nrow(spp)),
+    # "observer" = rep(surveys$observer, each = nrow(spp)),
     #"distance" = rep(surveys$distance, each = nrow(spp)),
     "code" = rep(spp$code, length(surveydays$survey_date)),
     "common_name" = rep(spp$common_name, length(surveydays$survey_date))
@@ -981,6 +985,8 @@ obs <- obs %>% filter(!survey_id %in% c(
     obs.all$bird_count <- as.integer(obs.all$bird_count)
     
   rm(tmp); gc()
+  
+  colnames(obs.all)
 ```
 
 
@@ -1037,9 +1043,6 @@ obs.all %>% group_by(site_code) %>%
 # obs.all %>% filter(site_code == "U-21")
 
 ```
-```{r}
-```
-
 
 
 ```{r summary stats for the surveys}
@@ -1101,6 +1104,15 @@ n.survey %>%
   ungroup() %>%
   # group_by(year_season) %>% 
   summarize(mean(n_survey), sd(n_survey))
+
+# What was the mean number of surveys across these sites/seasons?
+n.observers %>%
+  filter(season %in% c("1_winter", "2_spring")) %>%
+  filter(location_type %in% c("ESCA", "riparian")) %>%
+  filter(survey_year <= 2016 & survey_year >= 2001 & survey_year != 2003) %>%
+  ungroup() %>%
+  # group_by(year_season) %>% 
+  summarize(mean(n_observers), sd(n_observers), min(n_observers), max(n_observers))
 ```
 
 
@@ -1355,8 +1367,8 @@ plot2
 
 # Export Observation Data
 ```{r export the cleaned bird count data by survey, warning = FALSE}
-saveRDS(y.count, "./data/bird_observations_countbysurvey.rds")
-saveRDS(K, "./data/bird_observations_surveycount.rds")
+saveRDS(y.count, "~/GitHub/caplter-birdcommunitydynamics/data/spp/bird_observations_countbysurvey.rds")
+saveRDS(K, "~/GitHub/caplter-birdcommunitydynamics/data/spp/bird_observations_surveycount.rds")
 # write.csv(K, "./bird_observations_surveycount.csv", row.names = FALSE)
 
 # str(apply(y.count, MARGIN = c(1,2,3), FUN = 'sum', na.rm = TRUE))
@@ -1364,8 +1376,8 @@ saveRDS(K, "./data/bird_observations_surveycount.rds")
 
 ```{r export the filtered seasonal count data, warning = FALSE}
 # write.csv(obs.seas, "C:/Research/CAPLTER/data/core_birds/bird_observations_byseasonmax.csv", row.names = FALSE)
-write.csv(obs.seas, "./data/bird_observations_countmeanbyseason.csv", row.names = FALSE)
-write.csv(obs.all, "./data/bird_observations_cleaned.csv", row.names = FALSE)
+write.csv(obs.seas, "~/GitHub/caplter-birdcommunitydynamics/data/spp/bird_observations_countmeanbyseason.csv", row.names = FALSE)
+write.csv(obs.all, "~/GitHub/caplter-birdcommunitydynamics/data/spp/bird_observations_cleaned.csv", row.names = FALSE)
 
 ```
 

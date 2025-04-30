@@ -49,7 +49,8 @@ library(GLMMadaptive)   # for calculating VIF for 'glmmTMB' models
 
 # Import Data
 ```{r, include = FALSE}
-list.files("~/GitHub/caplter-birdcommunitydynamics/data")
+list.files("~/GitHub/caplter-birdcommunitydynamics/data/spp")
+list.files("~/GitHub/caplter-birdcommunitydynamics/data/traits")
 ```
 ### Bird species traits
 ```{r, echo = TRUE}
@@ -181,20 +182,6 @@ bird.counts.mean[is.nan(bird.counts.mean)== TRUE] <- NA
     obs  %>% group_by(site_code, survey_year, season) %>% slice(1) %>% arrange(survey_year, season) %>%
       ungroup() %>% summarize(n_site = length(site_code), .by = c(survey_year, season))
 
-  # weight detections and counts by popularity and congruence
-    range(obs$congruence, na.rm = TRUE)
-    min(obs$congruence, na.rm = TRUE)
-    
-    obs <- obs %>% 
-      # first, rescale congruence and popularity values 
-      mutate(congruence_scaled = (congruence - (min(congruence, na.rm = TRUE)))/
-                                 (max(congruence, na.rm = TRUE) - min(congruence, na.rm = TRUE)),
-             popularity_scaled = (popularity - (min(popularity, na.rm = TRUE)))/
-                                 (max(popularity, na.rm = TRUE) - min(popularity, na.rm = TRUE)),
-             det_weight_con = det*congruence_scaled,
-             count_weight_con = count_mean*congruence_scaled,
-             det_weight_pop = det*popularity_scaled,
-             count_weight_pop = count_mean*popularity_scaled)
     
     # hist(obs$count_mean, breaks = 100)
     # hist(obs$count_weight_con, breaks = 100)
@@ -211,33 +198,16 @@ bird.counts.mean[is.nan(bird.counts.mean)== TRUE] <- NA
     
 obs %>% filter(code == "ABTO") %>% summarize(n_site = length(site_code), .by = c(survey_year, season)) %>% arrange(n_site)
 ```
-### Site and survey summary
-```{r}
-# number of survey days per site, per season
-(n.survey <- obs %>%
-  group_by(site_code, location_type, survey_year, season, year_season, code) %>%
-  filter(code == "ABTO") %>% 
-  summarize(n_survey = length(season)) %>% select(-code) %>% arrange(n_survey, survey_year))
 
-# number of observers per site, per season
-(n.observers <- obs %>%
-  group_by(site_code, location_type, survey_year, season, year_season, code) %>%
-  filter(code == "ABTO") %>% summarize(n_observers = length(unique(observer))) %>% select(-code) #%>% 
-    # arrange(n_observers, survey_year)
-  )
-
-mean(n.observers$n_observers)
-hist(n.observers$n_observers)
-max(n.observers$n_observers)
-min(n.observers$n_observers)
-sd(n.observers$n_observers)
-```
 
 
 ### Environmental data for core bird survey sites
+
+Haight, J., De Albuquerque, F. & Frazier, A. Seasonal and annual summary statistics of urbanization, vegetation, land surface temperature, and bioclimatic variables derived from remotely-sensed imagery in areas surrounding long-term bird monitoring locations in the greater Phoenix, Arizona, USA metropolitan area (1997-2023). Environmental Data Initiative https://doi.org/10.6073/PASTA/9D44CD85F881586D6D06E7A7293E833C (2024).
+
 ```{r, message = FALSE}
-# Import the by-site environmental summary data (TO BE) located on the CAP LTER database
-data.env <- read.csv("H:/Shared drives/CAP USE Postdoc/Spatial Data/env_summaries/corebirds/for_publication/envsummaries_corebirds_combined.csv") %>%
+# Import the by-site environmental summary data sourced from the CAP LTER database
+data.env <- read.csv("~/GitHub/caplter-birdcommunitydynamics/data/sites/envsummaries_corebirds_combined.csv") %>%
    filter(region == "1000 m buffer") %>%
   select(-c(region, statistic))
     
@@ -385,15 +355,6 @@ ggplot(data = data.env, aes (x = ppt_sum, y = temp_min, group = season, col = se
 
 # Summarize Abundance and Diversity Metrics
 ### Community-level abundance and diversity
-```{r}
-hist(obs$congruence)
-obs %>% filter(cultural_niche %in% c("Friend", "Neighbor")) %>% pull(common_name) %>% unique() %>% length()
-obs %>% filter(congruence < 0.5) %>% pull(common_name) %>% unique() %>% length()
-
-median(obs$congruence, na.rm = TRUE)
-obs %>% filter(congruence > 0.3921812) %>% pull(common_name) %>% unique() %>% length()
-obs %>% filter(congruence < 0.3921812) %>% pull(common_name) %>% unique() %>% length()
-```
 
 ```{r, message = FALSE, echo = TRUE, warning = FALSE}
 # Metrics for local-level communities
@@ -403,9 +364,7 @@ div.loc <- obs %>% #filter(code %in% c(spp.known)) %>%
     count_sum = sum(count_max, na.rm = TRUE),    # a count of all birds
     n_survey = max(n_survey, na.rm = TRUE),  # number of surveys per season. 'max' because this should be the same for all species
     abundance = sum(count_mean, na.rm = TRUE),  # abundance as the number of birds counted, ('count_mean' is already standardized by # of surveys)
-    abund_weight_con = sum(count_weight_con, na.rm = TRUE),
     rich = sum(det, na.rm = TRUE),      # local species richness as the sum of detection across the community
-    rich_weight_con = sum(det_weight_con, na.rm = TRUE),
     # H = sum(p_lnp, na.rm = TRUE)*(-1),  # local species diversity (Shannon Index),
     # evenness =  H/log(rich + 0.000000000001)
     .by = c(site_code, location_type, survey_year, season)
@@ -546,44 +505,6 @@ ggplot(div.reg, aes(x = survey_year, y = abund_reg_siteavg, col = season)) +
 Following Hordley et al. 2021, I have created two ecosystem function/service based guilds so far: seed dispersers (diet of at least 30% fruit and seeds) and insectivores (terrestrial invertivores)
 ```{r, message = FALSE, echo = TRUE}
 # Guild-level Metrics 
-  # Cultural Niche groups based on data from Schuetz and Johnston 2019
-    g.cultural <- obs %>% 
-      filter(is.na(cultural_niche) == FALSE) %>%
-      summarize(
-        n_survey = max(n_survey, na.rm = TRUE),  # number of surveys per season. 'max' because this should be the same for all species
-        abundance = sum(count_mean),  # abundance as the number of birds counted, ('count_mean' is already standardized by # of surveys)
-        rich = sum(det, na.rm = TRUE),
-        n_guild = length(cultural_niche),     # number of species in the group
-      .by = c(site_code, location_type, survey_year, season, cultural_niche)
-      )
-    # g.cultural
-
-
-  # Trait clusters from Andrade et al. 2022 (a subset of species found in PASS nbhds.)
-    # g.cluster <- obs %>% 
-    #   # drop_na(trait_cluster) %>%
-    #   filter(is.na(trait_cluster) == FALSE) %>%
-    #   summarize(
-    #     n_survey = max(n_survey, na.rm = TRUE), 
-    #     abundance = sum(count_mean),        
-    #     rich = sum(det, na.rm = TRUE),
-    #     n_guild = length(trait_cluster),
-      # .by = c(site_code, location_type, survey_year, season, trait_cluster)      
-    #   )
-    # g.cluster
-
-  # Habitat specialization guilds
-    # based on the classification schemes of Lerman & Warren 2011, Warren et al. 2019, and Andrade et al. 2021
-    # g.hab <- obs %>% 
-    #   filter(is.na(habitat_guild) == FALSE) %>%
-    #   summarize(
-    #     n_survey = max(n_survey, na.rm = TRUE), 
-    #     abundance = sum(count_mean),      
-    #     rich = sum(det, na.rm = TRUE),
-    #     n_guild = length(habitat_guild),
-      # .by = c(site_code, location_type, survey_year, season, habitat_guild) 
-    # )
-    
     # Seed dispersers (species with >30% fruit and seed in their diet)
     g.seed <- obs %>% 
       filter(is.na(SeedDisperser) == FALSE) %>%
@@ -596,16 +517,16 @@ Following Hordley et al. 2021, I have created two ecosystem function/service bas
       )
 
     
-  # Terrestrial invertivores 
-    # there are only terrestrial invertivores in this dataset
-    birdtraits.all %>% filter(common_name %in% c(obs %>% filter(Invertivore == 1) %>% pull(common_name) %>% unique()))
+  # Insectivores
+    # there are only terrestrial insectivores in this dataset, no aquatic-foraging invertivores
+    birdtraits.all %>% filter(common_name %in% c(obs %>% filter(Insectivore == 1) %>% pull(common_name) %>% unique()))
 
-    g.inv <- obs %>% filter(Invertivore == 1) %>%
+    g.inv <- obs %>% filter(Insectivore == 1) %>%
       summarize(
         n_survey = max(n_survey, na.rm = TRUE), 
         abundance = sum(count_mean), 
         rich = sum(det, na.rm = TRUE), 
-        n_guild = length(Invertivore),
+        n_guild = length(Insectivore),
       .by = c(site_code, location_type, survey_year, season)
       )
     
@@ -615,90 +536,30 @@ Following Hordley et al. 2021, I have created two ecosystem function/service bas
         n_survey = max(n_survey, na.rm = TRUE), 
         abundance = sum(count_mean), 
         rich = sum(det, na.rm = TRUE), 
-        n_guild = length(Invertivore),
+        n_guild = length(Insectivore),
       .by = c(site_code, location_type, survey_year, season)
       )
-    
-  # Waterfowl
-    # g.waterfowl <- obs %>% filter(waterfowl == 1) %>%
-    #   group_by(site_code, location_type, survey_year, season, waterfowl) %>%
-    #   mutate(abundance = sum(count_mean)) %>%
-    #   filter(!code %in% c(spp.unknown)) %>% 
-    #   summarize(abundance = first(abundance), n_survey = max(n_survey, na.rm = TRUE), 
-    #             rich = sum(det, na.rm = TRUE), n_guild = sum(waterfowl),
-      # .by = c(site_code, location_type, survey_year, season, waterfowl))
-    
-  # Woodpeckers
-    g.wood <- obs %>% filter(woodpecker == 1) %>%
-      summarize(
-        n_survey = max(n_survey, na.rm = TRUE), 
-        abundance = sum(count_mean), 
-        rich = sum(det, na.rm = TRUE), 
-        n_guild = length(Invertivore),
-      .by = c(site_code, location_type, survey_year, season)
-      )
-    
-
-
+   
 ```
 
 ```{r merge community and guild datasets, message = FALSE}
 # Add the guild-level values as columns in the main dataset
 data.div <- div.loc %>% left_join(div.reg) %>%
-  # cultural niches
-    left_join(g.cultural %>% select(-c(rich, n_guild)) %>% 
-                pivot_wider(names_from = cultural_niche, names_prefix = "abund_", values_from = abundance)) %>%
-    left_join(g.cultural %>% select(-c(abundance, n_guild)) %>% 
-                pivot_wider(names_from = cultural_niche, names_prefix = "rich_", values_from = rich)) %>%
-    left_join(g.cultural %>% select(-c(abundance, rich)) %>% 
-                pivot_wider(names_from = cultural_niche, names_prefix = "n_guild_", values_from = n_guild)) %>% 
-  # habitat guilds
-    # left_join(g.hab %>% select(-c(rich, n_guild)) %>% 
-    #             pivot_wider(names_from = habitat_guild, names_prefix = "abund_", values_from = abundance)) %>%
-    # left_join(g.hab %>% select(-c(abundance, n_guild)) %>% 
-    #             pivot_wider(names_from = habitat_guild, names_prefix = "rich_", values_from = rich)) %>%
-    # left_join(g.hab %>% select(-c(abundance, rich)) %>% 
-    #             pivot_wider(names_from = habitat_guild, names_prefix = "n_guild_", values_from = n_guild)) %>% 
-  # trait clusters
-    # left_join(g.cluster %>% select(-c(rich, n_guild)) %>% 
-    #             pivot_wider(names_from = trait_cluster, names_prefix = "abund_", values_from = abundance)) %>%
-    # left_join(g.cluster %>% select(-c(abundance, n_guild)) %>% 
-    #             pivot_wider(names_from = trait_cluster, names_prefix = "rich_", values_from = rich)) %>%
-    # left_join(g.cluster %>% select(-c(abundance, rich)) %>% 
-    #             pivot_wider(names_from = trait_cluster, names_prefix = "n_guild_", values_from = n_guild)) %>%
   # seed dispersers
     left_join(g.seed %>% filter(SeedDisperser == "1") %>% 
                 rename(all_of(c(abund_SeedDisp = "abundance", rich_SeedDisp = "rich", n_guild_SeedDisp = "n_guild"))) %>% 
                 select(-c(SeedDisperser))
               ) %>%
-  # invertivores
+  # Insectivores
     left_join(g.inv %>% #
                 rename(all_of(c(abund_Invert = "abundance", rich_Invert = "rich", n_guild_Invert = "n_guild")))
               ) %>%
   # pollinators
     left_join(g.pollen %>% #filter(hummingbird == "1") %>% 
                 rename(all_of(c(abund_pollen = "abundance", rich_pollen = "rich", n_guild_pollen = "n_guild")))
-              ) %>%
-  # waterfowl
-    # left_join(g.waterfowl %>% 
-    #             rename(all_of(c(abund_waterfowl = "abundance", rich_waterfowl = "rich", n_guild_waterfowl = "n_guild"))) 
-    #           ) %>%
-  # woodpeckers
-    left_join(g.wood %>% #filter(woodpecker == "1") %>% 
-                rename(all_of(c(abund_woodpeck = "abundance", rich_woodpeck = "rich", n_guild_woodpeck = "n_guild")))
-              ) %>%
-  mutate(
-    abund_local = abund_Friend + abund_Neighbor,
-    rich_local = rich_Friend + rich_Neighbor,
-    n_guild_local = n_guild_Friend + n_guild_Neighbor,
-    abund_wide = abund_Friend + abund_Neighbor,
-    rich_wide = rich_Friend + rich_Neighbor,
-    n_guild_wide = n_guild_Celebrity + n_guild_Stranger
-    )
+              ) 
 data.div
 ```
-
-
 
 
 
@@ -830,15 +691,15 @@ data.spr <- left_join(data.div, data.env.model) %>%
   # group_by(code) %>% mutate(abundance_mean = mean(abundance_tot, na.rm = TRUE)) %>%
   group_by(code, season) %>% slice(1) %>% 
   select(c(
-    common_name, sci_name, nombre_comun_MX,  code, season, 
+    common_name, sci_name, code, season, 
     det_project, det_season, abundance_mean,
-    SeedDisperser, Invertivore, Pollinator, woodpecker, Friend, Neighbor)) %>% # everything should be the same here except det_season
+    SeedDisperser, Insectivore, Pollinator)) %>% # everything should be the same here except det_season
   pivot_wider(names_from = season, names_prefix = "det_", values_from = det_season) %>% 
   select( # use select to reorder the columns
     common_name,  #nombre_comun_MX,  
     sci_name,code,
     det_project, det_1_winter, det_2_spring, abundance_mean,
-    SeedDisperser, Invertivore, Pollinator, #woodpecker, Friend, Neighbor #det_season,
+    SeedDisperser, Insectivore, Pollinator, #woodpecker, Friend, Neighbor #det_season,
   ) %>% arrange(common_name)
 birdtraits.obs$det_1_winter[which(is.na(birdtraits.obs$det_1_winter) == TRUE)] <- 0
 birdtraits.obs$det_2_spring[which(is.na(birdtraits.obs$det_2_spring) == TRUE)] <- 0
@@ -846,16 +707,16 @@ birdtraits.obs %>% filter(Pollinator == 1)
 
 
 
-write.csv((birdtraits.obs %>% filter(code %in% spp.known)), "./figures/supplementarytable_specieslist_known.csv", row.names = FALSE)
+write.csv((birdtraits.obs %>% filter(code %in% spp.known)), "~/GitHub/caplter-birdcommunitydynamics/figures/supplementarytable_specieslist_known.csv", row.names = FALSE)
 
-write.csv((birdtraits.obs %>% filter(code %in% spp.unknown)), "./figures/supplementarytable_specieslist_unknown.csv", row.names = FALSE)
+write.csv((birdtraits.obs %>% filter(code %in% spp.unknown)), "~/GitHub/caplter-birdcommunitydynamics/figures/supplementarytable_specieslist_unknown.csv", row.names = FALSE)
 ```
 
 ```{r export model input data}
 rm(
   bird.clim, bird.clim.annual, bird.ls, bird.ls.sd, bird.ls.annual, data.env.prevsummer, data.env.prevyear, obs.all,
   bird.pts, birdtraits.all, 
-  var.cont,  g.waterfowl, g.wood, g.cluster, g.cultural, g.hab, # g.inv, g.seed, g.pollen,
+  var.cont, # g.waterfowl, g.wood, g.cluster, g.cultural, g.hab, # g.inv, g.seed, g.pollen,
   beta.s, beta.t, beta.mean, beta.sd,
   spe, time_lag_yr, crs.utm
 )
@@ -867,16 +728,12 @@ save.image(file = "~/GitHub/caplter-birdcommunitydynamics/data/modelinputs_CAPbi
 ### Distributions of response variables
 ```{r}
 hist(data.win$abundance, breaks = 100)
-hist(data.win$abund_weight_con, breaks = 100)
 hist(data.win$rich, breaks = 30)
-hist(data.win$rich_weight_con, breaks = 30)
 # hist(data.win$beta_s_mean, breaks = 30)
 # hist(data.win$H, breaks = 20)
 # hist(data.win$evenness, breaks = 20)
 hist(data.spr$abundance, breaks = 100)
-hist(data.spr$abund_weight_con, breaks = 100)
 hist(data.spr$rich, breaks = 30)
-hist(data.spr$rich_weight_con, breaks = 30)
 # hist(data.spr$beta_s_mean, breaks = 30)
 
 
@@ -893,18 +750,11 @@ hist(data.spr$abund_SeedDisp)
 hist(data.spr$rich_SeedDisp)
 
 
-# Hummingbird abundance
+# Pollinator abundance
 hist(data.win$abund_pollen, breaks = 8)
 hist(data.win$rich_pollen, breaks = 20)
 hist(data.spr$abund_pollen, breaks = 100)
 hist(data.spr$rich_pollen, breaks = 20)
-
-
-# Woodpecker abundance
-hist(data.win$abund_woodpeck)
-hist(data.win$rich_woodpeck)
-hist(data.spr$abund_woodpeck)
-hist(data.spr$rich_woodpeck)
 
 
 ```  
@@ -913,113 +763,6 @@ hist(data.spr$rich_woodpeck)
 
 
 
-
-### Check for bivariate collinearity among predictor and response variables
-```{r across both seasons}
-var.cont <- data.frame((data.env %>% filter(season %in% c("1_winter", "2_spring")))) %>% 
-    select(c(NDBI, NDBI_prevsum, #NISI, NDISI, ENDISI, 
-             NDVI, NDVI_prevsum, #SAVI, MNDWI, 
-             LST, LST_prevsum, 
-             ppt_sum, ppt_sum_prevsum,
-             #temp_max, temp_max_prevsum, 
-             temp_min, temp_min_prevsum,
-             # NDBI_sd,
-             # NDVI_sd,        # highly correlated with NDBI_sd
-             # LST_sd,
-             # abundance, rich, 
-             survey_year
-             ))
-corplot.all <- ggcorrplot(cor((var.cont), use = "complete.obs", method = "spearman"), 
-           hc.order = FALSE, 
-           type = "lower",
-           lab = TRUE,
-           lab_size = 2.5,
-           outline.color = "white")
-corplot.all
-```
-
-
-```{r by season}
-var.cont <- data.frame(data.win) %>% 
-    select(c(NDBI, NDBI_prevsum, #NISI, NDISI, ENDISI, 
-             NDVI, NDVI_prevsum, #SAVI, MNDWI, 
-             LST, LST_prevsum, 
-             ppt_sum, ppt_sum_prevsum,
-             temp_max, temp_max_prevsum, 
-             temp_min, temp_min_prevsum,
-             # NDBI_sd,
-             # NDVI_sd,
-             # LST_sd,
-             abundance, rich, 
-             survey_year
-             ))
-corplot1 <- ggcorrplot(cor((var.cont), use = "complete.obs", method = "spearman"), 
-           hc.order = FALSE, 
-           type = "lower",
-           lab = TRUE,
-           lab_size = 2.5,
-           outline.color = "white")
-
-var.cont <- data.frame(data.spr) %>% 
-    select(c(NDBI, NDBI_prevsum, #NISI, NDISI, ENDISI, 
-             # NDVI, 
-              #SAVI, MNDWI, 
-             # NDBI_sd,    # highly correlated with LST_sd and NDVI_prevsum
-             # NDVI_sd,
-             # LST_sd,
-             NDVI_prevsum,   # highly correlated with NDBI
-             LST, LST_prevsum, 
-             ppt_sum, ppt_sum_prevsum, 
-             temp_max, temp_max_prevsum,
-             temp_min, temp_min_prevsum,   # r > 0.6 with temp_max and temp_max_t0
-             # NDVI_winter,
-             # LST_winter,
-             # ppt_sum_winter, # r = -0.62 with temp_max_winter
-             # temp_max_winter,
-             # temp_min_winter,
-             abundance, rich, 
-             survey_year
-             ))
-corplot2 <- ggcorrplot(cor((var.cont), use = "complete.obs", method = "spearman"), 
-           hc.order = FALSE, 
-           type = "lower",
-           lab = TRUE,
-           lab_size = 2.5,
-           outline.color = "white") 
-
-corplot1
-corplot2
-# the monsoon seasons has become hotter and wetter?
-plot((data.win$survey_year-1), data.win$ppt_sum_prevsum)
-plot((data.win$survey_year-1), data.win$LST_prevsum)
-
-ggsave("./figures/collinearity_envvariables_corebirds_1winter.png",
-       corplot1,
-       width = 6,
-       height = 4,
-       units = "in",
-       dpi = 300)
-
-ggsave("./figures/collinearity_envvariables_corebirds_2spring.png",
-       corplot2,
-       width = 6,
-       height = 4,
-       units = "in",
-       dpi = 300)
-
-
-```
-
-
-
-A few notes:   
-Across both seasons, NISI is very highly correlated with ENDISI and both NDVI and SAVI. ENDISI is also correlated with NDVI and SAVI, but not as strongly as NISI.  
-
-LST is not highly correlated with anything, but it is moderately correlated with veg and NDBI. Previous summer's temperature (LST) it the environmental variable most strongly correlated with richness and abundance.  
-
-Of the urbanization metrics, ENDISI and NISI have weak negative correlations with richness and abundance, respectively. NDBI has an even stronger negative correlations (~0.2-0.3).NDISI is positively correlated with both abundance and richness, which suggests it is not an effective measure of urbanization.  
-
-NDVI is highly correlated with most urbanization metrics, and moderately with precipitation. NDVI of the previous summer season is moderately correlated with a lot of variables, especially the previous summer's LST (r = -0.61).  
 
 
 

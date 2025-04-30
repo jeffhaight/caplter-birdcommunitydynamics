@@ -1,0 +1,164 @@
+"common_name","sci_name","code","det_project","det_1_winter","det_2_spring","abundance_mean","SeedDisperser","Insectivore","Pollinator"
+"Abert's Towhee","Melozone aberti","ABTO",831,421,410,0.326337719298246,0,1,0
+"American Coot","Fulica americana","AMCO",61,35,26,0.0478070175438597,1,0,0
+"American Crow","Corvus brachyrhynchos","AMCR",3,0,3,0.00175438596491228,1,0,0
+"American Goldfinch","Spinus tristis","AGOL",5,4,0,0.00570175438596492,1,0,0
+"American Kestrel","Falco sparverius","AMKE",243,161,82,0.0603070175438596,0,1,0
+"American Pipit","Anthus rubescens","AMPI",17,16,0,0.0951754385964911,0,1,0
+"American White Pelican","Pelecanus erythrorhynchos","AWPE",4,4,0,0.0228070175438597,0,0,0
+"American Wigeon","Mareca americana","AMWI",33,32,0,0.193421052631579,0,0,0
+"Anna's Hummingbird","Calypte anna","ANHU",1312,753,559,0.369265350877193,0,0,1
+"Ash-throated Flycatcher","Myiarchus cinerascens","ATFL",189,7,182,0.055219298245614,0,1,0
+"Bald Eagle","Haliaeetus leucocephalus","BAEA",22,12,10,0.00526315789473684,0,0,0
+"Bell's Vireo","Vireo bellii","BEVI",41,0,41,0.0236842105263158,0,1,0
+"Belted Kingfisher","Megaceryle alcyon","BEKI",27,19,8,0.00657894736842105,0,0,0
+"Bendire's Thrasher","Toxostoma bendirei","BETH",8,2,6,0.00175438596491228,1,1,0
+"Bewick's Wren","Thryomanes bewickii","BEWR",59,38,21,0.0169956140350877,0,1,0
+"Black Phoebe","Sayornis nigricans","BLPH",123,97,26,0.0336622807017544,0,1,0
+"Black Vulture","Coragyps atratus","BLVU",4,2,2,0.00197368421052631,0,0,0
+"Black-bellied Whistling-Duck","Dendrocygna autumnalis","BBWD",11,0,11,0.0144736842105263,0,0,0
+"Black-chinned Hummingbird","Archilochus alexandri","BCHU",59,0,59,0.0318859649122807,0,0,1
+"Black-crowned Night-Heron","Nycticorax nycticorax","BCNH",89,46,43,0.0743421052631579,0,0,0
+"Black-headed Grosbeak","Pheucticus melanocephalus","BHGR",2,0,2,0.000877192982456139,1,1,0
+"Black-necked Stilt","Himantopus mexicanus","BNST",12,6,6,0.00942982456140351,0,0,0
+"Black-tailed Gnatcatcher","Polioptila melanura","BTGN",298,157,141,0.0915570175438596,0,1,0
+"Black-throated Gray Warbler","Setophaga nigrescens","BTYW",10,0,9,0.0043859649122807,0,1,0
+"Black-throated Sparrow","Amphispiza bilineata","BTSP",356,197,159,0.229934210526316,1,1,0
+"Blue-gray Gnatcatcher","Polioptila caerulea","BGGN",11,8,3,0.00328947368421052,0,1,0
+"Blue-winged Teal","Spatula discors","BWTE",4,0,3,0.00394736842105264,1,0,0
+"Brewer's Blackbird","Euphagus cyanocephalus","BRBL",26,16,10,0.0543859649122807,0,1,0
+"Brewer's Sparrow","Spizella breweri","BRSP",160,25,135,0.194298245614035,1,1,0
+"Bronzed Cowbird","Molothrus aeneus","BROC",5,0,4,0.00482456140350877,1,1,0
+"Brown Pelican","Pelecanus occidentalis","BRPE",2,2,0,0.000877192982456139,0,0,0
+"Brown-crested Flycatcher","Myiarchus tyrannulus","BCFL",8,0,8,0.00394736842105263,0,1,0
+"Brown-headed Cowbird","Molothrus ater","BHCO",204,6,198,0.14030701754386,1,1,0
+"Bullock's Oriole","Icterus bullockii","BUOR",21,0,21,0.0109649122807017,0,1,0
+"Burrowing Owl","Athene cunicularia","BUOW",34,9,25,0.0146929824561404,0,0,0
+"Cactus Wren","Campylorhynchus brunneicapillus","CACW",554,237,317,0.173081140350877,0,1,0
+"Canada Goose","Branta canadensis","CANG",108,66,42,0.201425438596491,0,0,0
+"Canyon Towhee","Melozone fusca","CANT",28,13,15,0.00723684210526316,1,0,0
+"Canyon Wren","Catherpes mexicanus","CANW",4,4,0,0.00263157894736842,0,1,0
+"Cassin's Vireo","Vireo cassinii","CAVI",4,2,2,0.00100877192982456,0,1,0
+"Cattle Egret","Bubulcus ibis","CAEG",8,2,6,0.00526315789473684,0,0,0
+"Chipping Sparrow","Spizella passerina","CHSP",20,4,16,0.0109649122807018,1,1,0
+"Cinnamon Teal","Spatula cyanoptera","CITE",15,5,10,0.0171052631578947,1,0,0
+"Cliff Swallow","Petrochelidon pyrrhonota","CLSW",24,0,23,0.132017543859649,0,1,0
+"Common Gallinule","Gallinula galeata","COGA",30,12,18,0.018640350877193,1,0,0
+"Common Goldeneye","Bucephala clangula","COGO",2,2,0,0.0162280701754386,0,0,0
+"Common Merganser","Mergus merganser","COME",9,8,0,0.0144736842105263,0,0,0
+"Common Raven","Corvus corax","CORA",451,273,178,0.189144736842105,0,0,0
+"Common Yellowthroat","Geothlypis trichas","COYE",113,27,86,0.0373245614035087,0,1,0
+"Cooper's Hawk","Accipiter cooperii","COHA",65,50,15,0.0152412280701754,0,0,0
+"Costa's Hummingbird","Calypte costae","COHU",185,84,101,0.0481359649122807,0,0,1
+"Crissal Thrasher","Toxostoma crissale","CRTH",3,3,0,0.00131578947368421,0,1,0
+"Curve-billed Thrasher","Toxostoma curvirostre","CBTH",718,310,408,0.209616228070175,1,1,0
+"Dark-eyed Junco","Junco hyemalis","DEJU",22,20,2,0.0212719298245614,1,1,0
+"Double-crested Cormorant","Nannopterum auritum","DCCO",181,104,77,0.298245614035088,0,0,0
+"Eurasian Collared-Dove","Streptopelia decaocto","EUCD",186,70,116,0.0660087719298245,1,0,0
+"European Starling","Sturnus vulgaris","EUST",627,231,396,0.559703947368421,1,0,0
+"Ferruginous Hawk","Buteo regalis","FEHA",8,8,0,0.00350877192982456,0,0,0
+"Gadwall","Mareca strepera","GADW",17,14,3,0.0173245614035088,1,0,0
+"Gambel's Quail","Callipepla gambelii","GAQU",526,100,426,0.367763157894737,1,0,0
+"Gila Woodpecker","Melanerpes uropygialis","GIWO",666,305,361,0.199835526315789,1,1,0
+"Gilded Flicker","Colaptes chrysoides","GIFL",85,49,36,0.0221491228070175,1,1,0
+"Gray Flycatcher","Empidonax wrightii","GRFL",9,0,8,0.00394736842105263,0,1,0
+"Great Blue Heron","Ardea herodias","GBHE",249,112,137,0.190570175438597,0,0,0
+"Great Egret","Ardea alba","GREG",164,90,74,0.169407894736842,0,0,0
+"Great Horned Owl","Bubo virginianus","GHOW",14,7,7,0.00416666666666667,0,0,0
+"Great-tailed Grackle","Quiscalus mexicanus","GTGR",1167,483,684,0.908684210526316,0,1,0
+"Greater Roadrunner","Geococcyx californianus","GRRO",32,9,23,0.00833333333333333,0,1,0
+"Greater Yellowlegs","Tringa melanoleuca","GRYE",12,8,4,0.00460526315789473,0,0,0
+"Green Heron","Butorides virescens","GRHE",32,20,12,0.00899122807017543,0,0,0
+"Green-tailed Towhee","Pipilo chlorurus","GTTO",24,5,19,0.00570175438596491,1,1,0
+"Green-winged Teal","Anas crecca","GWTE",16,15,0,0.0850877192982457,0,0,0
+"Harris's Hawk","Parabuteo unicinctus","HAHA",22,15,7,0.00614035087719298,0,0,0
+"Hermit Thrush","Catharus guttatus","HETH",7,5,2,0.00153508771929824,0,1,0
+"Hermit Warbler","Setophaga occidentalis","HEWA",2,0,2,0.000701754385964912,0,1,0
+"Hooded Merganser","Lophodytes cucullatus","HOME",2,2,0,0.000877192982456141,0,0,0
+"Hooded Oriole","Icterus cucullatus","HOOR",4,0,4,0.00219298245614035,0,1,0
+"Horned Lark","Eremophila alpestris","HOLA",43,21,22,0.0475877192982456,1,1,0
+"House Finch","Haemorhous mexicanus","HOFI",1447,646,801,1.07433114035088,1,0,0
+"House Sparrow","Passer domesticus","HOSP",1583,704,879,2.2146600877193,1,0,0
+"House Wren","Troglodytes aedon","HOWR",10,8,2,0.00263157894736842,0,1,0
+"Inca Dove","Columbina inca","INDO",334,108,226,0.177894736842105,1,0,0
+"Killdeer","Charadrius vociferus","KILL",131,37,94,0.05375,0,1,0
+"Ladder-backed Woodpecker","Dryobates scalaris","LBWO",87,45,42,0.0208333333333333,0,1,0
+"Lark Bunting","Calamospiza melanocorys","LARB",6,0,5,0.0850877192982456,1,1,0
+"Lark Sparrow","Chondestes grammacus","LASP",27,9,18,0.0379385964912281,1,1,0
+"Lazuli Bunting","Passerina amoena","LAZB",11,0,11,0.00833333333333333,1,1,0
+"Least Sandpiper","Calidris minutilla","LESA",12,9,3,0.0184210526315789,0,0,0
+"Lesser Goldfinch","Spinus psaltria","LEGO",194,71,123,0.103399122807018,1,0,0
+"Lesser Nighthawk","Chordeiles acutipennis","LENI",4,0,4,0.00263157894736842,0,1,0
+"Lesser Scaup","Aythya affinis","LESC",4,4,0,0.00657894736842105,1,0,0
+"Lincoln's Sparrow","Melospiza lincolnii","LISP",25,15,10,0.00888157894736842,1,1,0
+"Loggerhead Shrike","Lanius ludovicianus","LOSH",51,30,21,0.012719298245614,0,1,0
+"Long-billed Dowitcher","Limnodromus scolopaceus","LBDO",3,3,0,0.0135964912280702,0,0,0
+"Lucy's Warbler","Leiothlypis luciae","LUWA",85,0,85,0.0543859649122807,0,1,0
+"MacGillivray's Warbler","Geothlypis tolmiei","MGWA",14,0,14,0.00622807017543859,0,1,0
+"Mallard","Anas platyrhynchos","MALL",386,173,213,0.541666666666667,0,0,0
+"Marsh Wren","Cistothorus palustris","MAWR",55,40,15,0.0240131578947368,0,1,0
+"Merlin","Falco columbarius","MERL",5,2,3,0.00109649122807017,0,0,0
+"Mourning Dove","Zenaida macroura","MODO",1520,543,977,1.19989035087719,1,0,0
+"Neotropic Cormorant","Nannopterum brasilianum","NECO",52,27,25,0.0475877192982456,0,0,0
+"Northern Cardinal","Cardinalis cardinalis","NOCA",91,30,61,0.0260964912280702,0,0,0
+"Northern Flicker","Colaptes auratus","NOFL",83,60,23,0.0209429824561403,1,1,0
+"Northern Harrier","Circus hudsonius","NOHA",69,61,8,0.0169956140350877,0,0,0
+"Northern Mockingbird","Mimus polyglottos","NOMO",737,293,444,0.216118421052632,1,1,0
+"Northern Pintail","Anas acuta","NOPI",28,26,2,0.147149122807018,0,0,0
+"Northern Rough-winged Swallow","Stelgidopteryx serripennis","NRWS",55,14,41,0.0446491228070175,0,1,0
+"Northern Shoveler","Spatula clypeata","NSHO",41,28,13,0.121491228070175,0,0,0
+"Orange-crowned Warbler","Leiothlypis celata","OCWA",119,71,48,0.0360964912280702,0,1,0
+"Osprey","Pandion haliaetus","OSPR",29,19,10,0.00745614035087719,0,0,0
+"Peregrine Falcon","Falco peregrinus","PEFA",21,17,4,0.00482456140350877,0,0,0
+"Phainopepla","Phainopepla nitens","PHAI",194,127,67,0.0668311403508772,1,1,0
+"Pied-billed Grebe","Podilymbus podiceps","PBGR",13,8,5,0.00570175438596491,0,0,0
+"Plumbeous Vireo","Vireo plumbeus","PLVI",3,0,3,0.00131578947368421,1,1,0
+"Prairie Falcon","Falco mexicanus","PRFA",7,6,0,0.00263157894736842,0,0,0
+"Red-naped Sapsucker","Sphyrapicus nuchalis","RNSA",6,6,0,0.00307017543859649,0,1,0
+"Red-tailed Hawk","Buteo jamaicensis","RTHA",399,277,122,0.109100877192982,0,0,0
+"Red-winged Blackbird","Agelaius phoeniceus","RWBL",237,48,189,0.475986842105263,1,1,0
+"Redhead","Aythya americana","REDH",8,7,0,0.0153508771929824,0,0,0
+"Ring-necked Duck","Aythya collaris","RNDU",43,39,4,0.111622807017544,0,0,0
+"Rock Pigeon","Columba livia","ROPI",496,240,256,0.480975877192982,1,0,0
+"Rock Wren","Salpinctes obsoletus","ROWR",84,55,29,0.0281798245614035,0,1,0
+"Rosy-faced Lovebird","Agapornis roseicollis","RFLO",26,12,14,0.00899122807017544,1,0,0
+"Ruby-crowned Kinglet","Corthylio calendula","RCKI",245,230,15,0.0710745614035087,0,1,0
+"Ruddy Duck","Oxyura jamaicensis","RUDU",13,11,2,0.0111842105263158,1,0,0
+"Rufous-crowned Sparrow","Aimophila ruficeps","RCSP",3,0,2,0.000877192982456139,1,1,0
+"Sage Thrasher","Oreoscoptes montanus","SATH",3,3,0,0.00131578947368421,0,1,0
+"Sagebrush Sparrow","Artemisiospiza nevadensis","SABS",18,18,0,0.0175438596491228,1,1,0
+"Savannah Sparrow","Passerculus sandwichensis","SAVS",14,8,6,0.0155701754385965,1,1,0
+"Say's Phoebe","Sayornis saya","SAPH",203,129,74,0.0546052631578947,0,1,0
+"Sharp-shinned Hawk","Accipiter striatus","SSHA",45,37,8,0.0103070175438596,0,0,0
+"Snow Goose","Anser caerulescens","SNGO",4,3,0,0.00175438596491228,0,0,0
+"Snowy Egret","Egretta thula","SNEG",95,46,49,0.102576754385965,0,0,0
+"Song Sparrow","Melospiza melodia","SOSP",228,100,128,0.100570175438596,1,1,0
+"Sora","Porzana carolina","SORA",2,2,0,0.00131578947368421,1,0,0
+"Spotted Sandpiper","Actitis macularius","SPSA",13,7,6,0.00307017543859649,0,0,0
+"Spotted Towhee","Pipilo maculatus","SPTO",8,4,4,0.00241228070175439,1,1,0
+"Swamp Sparrow","Melospiza georgiana","SWSP",2,2,0,0.000877192982456139,1,1,0
+"Townsend's Warbler","Setophaga townsendi","TOWA",5,0,5,0.00228070175438596,0,1,0
+"Turkey Vulture","Cathartes aura","TUVU",164,33,131,0.0827850877192983,0,0,0
+"Verdin","Auriparus flaviceps","VERD",1774,857,917,0.611359649122807,0,1,0
+"Vermilion Flycatcher","Pyrocephalus rubinus","VEFL",17,8,9,0.00460526315789474,0,1,0
+"Vesper Sparrow","Pooecetes gramineus","VESP",10,7,3,0.0135964912280702,1,1,0
+"Virginia Rail","Rallus limicola","VIRA",3,2,0,0.000877192982456139,0,0,0
+"Virginia's Warbler","Leiothlypis virginiae","VIWA",3,0,3,0.00131578947368421,0,1,0
+"Warbling Vireo","Vireo gilvus","WAVI",4,0,4,0.00219298245614035,0,1,0
+"Western Bluebird","Sialia mexicana","WEBL",5,3,2,0.00328947368421052,1,1,0
+"Western Flycatcher","Empidonax difficilis","WEFL",4,0,4,0.00175438596491228,0,1,0
+"Western Kingbird","Tyrannus verticalis","WEKI",59,0,58,0.0424342105263158,0,1,0
+"Western Meadowlark","Sturnella neglecta","WEME",33,30,3,0.0342105263157895,1,1,0
+"Western Sandpiper","Calidris mauri","WESA",3,0,2,0.00701754385964912,0,0,0
+"Western Tanager","Piranga ludoviciana","WETA",5,0,5,0.00219298245614035,0,1,0
+"Western Wood-Pewee","Contopus sordidulus","WEWP",11,0,10,0.00640350877192982,0,1,0
+"White-crowned Sparrow","Zonotrichia leucophrys","WCSP",533,355,178,0.39468201754386,1,0,0
+"White-faced Ibis","Plegadis chihi","WFIB",21,11,10,0.470833333333333,0,0,0
+"White-winged Dove","Zenaida asiatica","WWDO",372,6,366,0.165274122807018,1,0,1
+"Wilson's Snipe","Gallinago delicata","WISN",5,5,0,0.00307017543859649,0,0,0
+"Wilson's Warbler","Cardellina pusilla","WIWA",84,0,83,0.0472807017543859,0,1,0
+"Yellow Warbler","Setophaga petechia","YEWA",95,8,87,0.0333991228070175,0,1,0
+"Yellow-breasted Chat","Icteria virens","YBCH",2,0,2,0.000877192982456139,0,1,0
+"Yellow-headed Blackbird","Xanthocephalus xanthocephalus","YHBL",4,0,4,0.00548245614035088,0,1,0
+"Yellow-rumped Warbler","Setophaga coronata","YRWA",642,480,162,0.349539473684211,0,1,0
+"Zone-tailed Hawk","Buteo albonotatus","ZTHA",2,0,2,0.00131578947368421,0,0,0

@@ -172,6 +172,20 @@ corplot.spr <- ggcorrplot(cor((var.cont), use = "complete.obs", method = "spearm
            lab_size = 2.5,
            outline.color = "white")
 corplot.spr
+
+ggsave("~/GitHub/caplter-birdcommunitydynamics/figures/collinearity/collinearity_envvariables_corebirds_1winter.png",
+       corplot.win,
+       width = 6,
+       height = 4,
+       units = "in",
+       dpi = 300)
+
+ggsave("~/GitHub/caplter-birdcommunitydynamics/figures/collinearity/collinearity_envvariables_corebirds_2spring.png",
+       corplot.spr,
+       width = 6,
+       height = 4,
+       units = "in",
+       dpi = 300)
 ```
 ### LST vs. Minimum Air Temperature
 ```{r}
@@ -196,7 +210,7 @@ env.model %>% filter(!season %in% c("annual")) %>%
   geom_smooth(method = "lm")+
   # scale_color_brewer(palette = "Dark2") +
   scale_color_manual(values = pal_season) +
-  # stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001, color = "black") +
+  stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001, color = "black") +
   labs(x = "LST", y = "Air Temperature") )
 
 
@@ -225,7 +239,7 @@ env.model %>% filter(!season %in% c("annual")) %>%
 # geom_boxplot(col = "green4")
 
 # within each season
-env.model %>% #filter(!season %in% c("annual")) %>%
+env.model %>% filter(!season %in% c("annual")) %>%
           ggplot(aes(x = NDBI, y = NDBI_prevsum, group = season, col = season)) +
   theme_classic() + 
   geom_point(alpha = 0.3, shape = 16) +
@@ -271,7 +285,7 @@ env.model %>% filter(!season %in% c("annual")) %>%
   # scale_color_brewer(palette = "Dark2") +
   scale_color_manual(values = pal_season) +
   coord_cartesian(ylim = c(0, 0.75)) +
-  # stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001, color = "black") +
+  stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001, color = "black") +
   labs(x = "Impervious Surface (NDBI)", y = "Vegetation (NDVI)") +
   theme(
     legend.position = "none",
@@ -564,10 +578,10 @@ ggplot(aes(x = as.factor(survey_year), y = ppt_sum, fill = season)) +
   coord_cartesian(ylim = c(0, 320)) +
   geom_boxplot()
 ```
-# DIFFERENCES BETWEEN SEASONS AND AMONG YEARS
+# DIFFERENCES AMONG ALL SEASONS AND YEARS
 
 ### Test for differences in environmental variables over time
-```{r differences among seasons}
+```{r differences among all seasons}
     
 # how about among seasons?   
     # among all seasons
@@ -575,14 +589,9 @@ ggplot(aes(x = as.factor(survey_year), y = ppt_sum, fill = season)) +
     kruskal.test(NDVI ~ season, data = env.model %>% filter(season != "annual"))
     kruskal.test(LST ~ season, data = env.model %>% filter(season != "annual"))
     kruskal.test(ppt_sum ~ season, data = env.model %>% filter(season != "annual"))    
-    # between winter and spring
-    wilcox.test(NDBI ~ season, data = (env.model %>% filter(season %in% c("1_winter", "2_spring"))))
-    wilcox.test(NDVI ~ season, data = (env.model %>% filter(season %in% c("1_winter", "2_spring"))))
-    wilcox.test(LST ~ season, data = (env.model %>% filter(season %in% c("1_winter", "2_spring"))))
-    wilcox.test(ppt_sum ~ season, data = (env.model %>% filter(season %in% c("1_winter", "2_spring"))))
 ```
 
-```{r}
+```{r differences among all years}
 # test for significant variation among years using the Kruskal-Wallis Rank Sum Test
     kruskal.test(NDBI ~ survey_year, data = data.env)
     kruskal.test(NDBI ~ survey_year, data = data.env)
@@ -618,7 +627,7 @@ ggplot(aes(x = as.factor(survey_year), y = ppt_sum, fill = season)) +
 
 ```
 
-```{r}
+```{r between season differences by location type}
 
     # how about a difference between site types (ESCA vs. riparian)?
       wilcox.test(NDBI ~ loc_type, data = (env.model %>% filter(season == "1_winter")))    # not significant (close)
@@ -645,13 +654,14 @@ ggplot(aes(x = as.factor(survey_year), y = ppt_sum, fill = season)) +
 ```
 
 
-
-
-# AMONG-YEAR VARIATION AND TRENDS IN ENVIRONMENTAL DATA
+# AMONG-YEAR VARIATION AND TRENDS IN MODELED ENVIRONMENTAL DATA
 
 ### NDBI trends
 
-```{r among-year variation NDBI}
+```{r temporal variation in NDBI}
+# between winter and spring
+    wilcox.test(NDBI ~ season, data = (env.model %>% filter(season %in% c("1_winter", "2_spring"))))
+
 # NDBI: significant difference only during the winter (almost in fall)
     kruskal.test(NDBI ~ survey_year, data = (env.model %>% filter(season == "1_winter")))
     kruskal.test(NDBI ~ survey_year, data = (env.model %>% filter(season == "2_spring")))
@@ -676,12 +686,12 @@ ggplot(aes(x = as.factor(survey_year), y = ppt_sum, fill = season)) +
 
 # for only the bird survey years and sites, NDBI has increased significantly, but not during spring
 (plot.trend <- env.model %>% filter(!season %in% c("annual")) %>%
-  ggplot(aes(x = survey_year, y = NDISI, group = season, color = season)) +
+  ggplot(aes(x = survey_year, y = NDBI, group = season, color = season)) +
   geom_point(alpha = 0.3, shape = 16, position = position_dodge(width = 0.6)) +
   geom_smooth(method = "gam", se = FALSE) +
   # scale_color_brewer(palette = "Dark2") +
   scale_color_manual(values = pal_season) +
-  # stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001, color = "black") +
+  stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001, color = "black") +
   # geom_smooth(aes)
   labs(x = "Year", y = "Impervious Surface (NDBI)") +
   theme_bw()+
@@ -699,26 +709,28 @@ ggplot(aes(x = as.factor(survey_year), y = ppt_sum, fill = season)) +
   ggplot(aes(x = survey_year, y = mean, group = season, color = season)) +
   geom_errorbar(aes(ymin = (mean-1.96*se), ymax = (mean+1.96*se)), width = 0.4, size = 0.4, position = position_dodge(width = 0.5),
                 alpha = 0.5) +
-  geom_point(shape = 16, position = position_dodge(width = 0.5)) +
+  geom_point(aes(shape = season), position = position_dodge(width = 0.5)) +
+  scale_shape_manual(values=c(16, 17, 15, 18))+
   geom_line(linewidth = 0.5, position = position_dodge(width = 0.5)) +
   # scale_color_brewer(palette = "Dark2") +
   scale_color_manual(values = pal_season) +
   scale_y_continuous(labels = label_number(accuracy = 0.01)) +
   # stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001, color = "black") +
   # coord_cartesian(ylim = c(0,30)) +
-  labs(x = "Year", y = "Impervious Surface (NDBI)") +
+  labs(x = "Year", y = "Impervious\nSurface (NDBI)") +
   theme_bw()+
     theme(
     legend.position = "none",
-    axis.text.x = element_text(angle = 30, vjust = 1, hjust=1, size = 14),
-    axis.text.y = element_text(size = 14),
-    axis.title = element_text(face = "bold", size = 16)
+    axis.text.x = element_text(angle = 30, vjust = 1, hjust=1, size = 7),
+    axis.text.y = element_text(size = 7),
+    axis.title.x = element_text(vjust = 2),
+    axis.title = element_text(face = "bold", size = 8)
   ))
 
 ggsave("./figures/trends_env/env_NDBI_birdsites_01to16.png",
        plot.trend,
-       width = 6,
-       height = 4,
+       width = 2.5,
+       height = 2,
        units = "in",
        dpi = 300)
 
@@ -830,7 +842,10 @@ glmmTMB(NDBI ~ year_std
 
 ### NDVI Trends
 
-```{r among-year variation NDVI}
+```{r temporal variation NDVI}
+# between winter and spring
+    wilcox.test(NDVI ~ season, data = (env.model %>% filter(season %in% c("1_winter", "2_spring"))))
+    
 # NDVI: significant for all seasons
     kruskal.test(NDVI ~ survey_year, data = (env.model %>% filter(season == "1_winter")))
     kruskal.test(NDVI ~ survey_year, data = (env.model %>% filter(season == "2_spring")))
@@ -849,7 +864,7 @@ glmmTMB(NDBI ~ year_std
   scale_color_manual(values = pal_season) +
   # coord_cartesian(ylim = c(0.05, 0.45)) +
   # stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001, color = "black") +
-  labs(x = "Year", y = "Vegetation (NDVI)") +
+  labs(x = "Year", y = "\nVegetation (NDVI)") +
   theme_bw()+
     theme(
     legend.position = "none",
@@ -866,26 +881,28 @@ glmmTMB(NDBI ~ year_std
   ggplot(aes(x = survey_year, y = mean, group = season, color = season)) +
   geom_errorbar(aes(ymin = (mean-1.96*se), ymax = (mean+1.96*se)), width = 0.4, size = 0.4, position = position_dodge(width = 0.5),
                 alpha = 0.5) +
-  geom_point(shape = 16, position = position_dodge(width = 0.5)) +
+  geom_point(aes(shape = season), position = position_dodge(width = 0.5)) +
+  scale_shape_manual(values=c(16, 17, 15, 18))+
   geom_line(linewidth = 0.5, position = position_dodge(width = 0.5)) +
   # scale_color_brewer(palette = "Dark2") +
   scale_color_manual(values = pal_season) +
   scale_y_continuous(labels = label_number(accuracy = 0.01)) +
   # stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001, color = "black") +
   # coord_cartesian(ylim = c(0,30)) +
-  labs(x = "Year", y = "Vegetation (NDVI)") +
+  labs(x = "Year", y = "\nVegetation (NDVI)") +
   theme_bw()+
     theme(
     legend.position = "none",
-    axis.text.x = element_text(angle = 30, vjust = 1, hjust=1, size = 14),
-    axis.text.y = element_text(size = 14),
-    axis.title = element_text(face = "bold", size = 16)
+    axis.text.x = element_text(angle = 30, vjust = 1, hjust=1, size = 7),
+    axis.text.y = element_text(size = 7),
+    axis.title.x = element_text(vjust = 2),
+    axis.title = element_text(face = "bold", size = 8)
   ))
 
 ggsave("./figures/trends_env/env_NDVI_birdsites_01to16.png",
        plot.trend,
-       width = 6,
-       height = 4,
+       width = 2.5,
+       height = 2,
        units = "in",
        dpi = 300)
 
@@ -927,8 +944,10 @@ ggsave("./figures/trends_env/env_NDVI_birdsites_01to16.png",
 ```
 
 ### LST Trends
-```{r among-year variation LST}
+```{r temporal variation LST}
 
+    # between winter and spring
+    wilcox.test(LST ~ season, data = (env.model %>% filter(season %in% c("1_winter", "2_spring"))))
     
     # LST: significant for all seasons
     kruskal.test(LST ~ survey_year, data = (env.model %>% filter(season == "1_winter")))
@@ -957,7 +976,7 @@ ggsave("./figures/trends_env/env_NDVI_birdsites_01to16.png",
   # scale_color_brewer(palette = "Dark2") +
   scale_color_manual(values = pal_season) +
   # stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001, color = "black") +
-  labs(x = "Year", y = "Land Surface Temperature (°C)") +
+  labs(x = "Year", y = "Land Surface\nTemperature (°C)") +
   theme_bw()+
     theme(
     legend.position = "none",
@@ -974,26 +993,28 @@ ggsave("./figures/trends_env/env_NDVI_birdsites_01to16.png",
   ggplot(aes(x = survey_year, y = mean, group = season, color = season)) +
   geom_errorbar(aes(ymin = (mean-1.96*se), ymax = (mean+1.96*se)), width = 0.4, size = 0.4, position = position_dodge(width = 0.5),
                 alpha = 0.5) +
-  geom_point(shape = 16, position = position_dodge(width = 0.5)) +
+  geom_point(aes(shape = season), position = position_dodge(width = 0.5)) +
+  scale_shape_manual(values=c(16, 17, 15, 18))+
   geom_line(linewidth = 0.5, position = position_dodge(width = 0.5)) +
   # scale_color_brewer(palette = "Dark2") +
   scale_color_manual(values = pal_season) +
   scale_y_continuous(labels = label_number(accuracy = 0.1)) +
   # stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001, color = "black") +
   # coord_cartesian(ylim = c(0,30)) +
-  labs(x = "Year", y = "Land Surface Temperature (°C)") +
+  labs(x = "Year", y = "Land Surface\nTemperature (°C)") +
   theme_bw()+
     theme(
     legend.position = "none",
-    axis.text.x = element_text(angle = 30, vjust = 1, hjust=1, size = 14),
-    axis.text.y = element_text(size = 14),
-    axis.title = element_text(face = "bold", size = 16)
-))
+    axis.text.x = element_text(angle = 30, vjust = 1, hjust=1, size = 7),
+    axis.text.y = element_text(size = 7),
+    axis.title.x = element_text(vjust = 2),
+    axis.title = element_text(face = "bold", size = 8)
+  ))
 
 ggsave("./figures/trends_env/env_LST_birdsites_01to16.png",
        plot.trend,
-       width = 6,
-       height = 4,
+       width = 2.5,
+       height = 2,
        units = "in",
        dpi = 300)
 
@@ -1041,8 +1062,10 @@ ggsave("./figures/trends_env/env_LST_birdsites_01to16.png",
 ```
 
 ### Precipitation Trends
-```{r among-year variation PPT}
-
+```{r temporal variation PPT}
+    # between winter and spring
+    wilcox.test(ppt_sum ~ season, data = (env.model %>% filter(season %in% c("1_winter", "2_spring"))))
+    
     # PPT: significant for all seasons
     kruskal.test(ppt_sum ~ survey_year, data = (env.model %>% filter(season == "1_winter")))
     kruskal.test(ppt_sum ~ survey_year, data = (env.model %>% filter(season == "2_spring")))
@@ -1088,25 +1111,27 @@ ggsave("./figures/trends_env/env_LST_birdsites_01to16.png",
   ggplot(aes(x = survey_year, y = mean, group = season, color = season)) +
   geom_errorbar(aes(ymin = (mean-1.96*se), ymax = (mean+1.96*se)), width = 0.4, size = 0.4, position = position_dodge(width = 0.5),
                 alpha = 0.5) +
-  geom_point(shape = 16, position = position_dodge(width = 0.5)) +
+  geom_point(aes(shape = season), position = position_dodge(width = 0.5)) +
+  scale_shape_manual(values=c(16, 17, 15, 18))+
   geom_line(linewidth = 0.5, position = position_dodge(width = 0.5)) +
   # scale_color_brewer(palette = "Dark2") +
   scale_color_manual(values = pal_season) +
   # stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001, color = "black") +
   # coord_cartesian(ylim = c(0,30)) +
-  labs(x = "Year", y = "Precipitation (mm)") +
+  labs(x = "Year", y = "\nPrecipitation (mm)") +
   theme_bw()+
     theme(
     legend.position = "none",
-    axis.text.x = element_text(angle = 30, vjust = 1, hjust=1, size = 14),
-    axis.text.y = element_text(size = 14),
-    axis.title = element_text(face = "bold", size = 16)
-))
+    axis.text.x = element_text(angle = 30, vjust = 1, hjust=1, size = 7),
+    axis.text.y = element_text(size = 7),
+    axis.title.x = element_text(vjust = 2),
+    axis.title = element_text(face = "bold", size = 8)
+  ))
 
 ggsave("./figures/trends_env/env_PPT_birdsites_01to16.png",
        plot.trend,
-       width = 6,
-       height = 4,
+       width = 2.5,
+       height = 2,
        units = "in",
        dpi = 300)
 

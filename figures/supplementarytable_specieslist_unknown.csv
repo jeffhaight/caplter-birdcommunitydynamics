@@ -1,0 +1,29 @@
+"common_name","sci_name","code","det_project","det_1_winter","det_2_spring","abundance_mean","SeedDisperser","Insectivore","Pollinator"
+"Unidentified Accipiter Hawk","Accipiter sp.","UAHA",6,6,0,0.00263157894736842,NA,NA,NA
+"Unidentified Bird","Aves (gen, sp)","UNBI",78,38,40,0.0222587719298245,NA,NA,NA
+"Unidentified Blackbird","Icteridae (gen, sp)","UNBL",8,0,7,0.00350877192982456,NA,NA,NA
+"Unidentified Buteo","Buteo sp.","UNBU",2,2,0,0.000877192982456139,NA,NA,NA
+"Unidentified Cormorant","Nannopterum sp.","UDCO",42,24,18,0.0521929824561403,NA,NA,NA
+"Unidentified Dove","Columbidae (gen, sp)","UDOV",8,0,7,0.00394736842105263,NA,NA,NA
+"Unidentified Duck","Anatinae (gen, sp)","UNDU",66,33,33,0.0991228070175438,NA,NA,NA
+"Unidentified Egret","Ardeidae (gen, sp)","UNEG",3,2,0,0.000877192982456139,NA,NA,NA
+"Unidentified Empidonax Flycatcher","Empidonax sp.","UEFL",9,2,7,0.00219298245614035,NA,NA,NA
+"Unidentified Falcon","Falconiformes (gen, sp)","UNFA",10,9,0,0.0043859649122807,NA,NA,NA
+"Unidentified Flicker","Colaptes sp.","UFLI",13,11,2,0.00307017543859649,NA,NA,NA
+"Unidentified Flycatcher","Colaptes sp.","UNFL",8,5,3,0.00175438596491228,NA,NA,NA
+"Unidentified Gnatcatcher","Polioptila sp.","UNGN",9,5,4,0.00241228070175438,NA,NA,NA
+"Unidentified Goose","Anserinae (gen. sp.)","UNGO",5,3,2,0.00197368421052632,NA,NA,NA
+"Unidentified Hawk","Accipitridae (gen, sp)","UNHA",44,32,12,0.0109649122807017,NA,NA,NA
+"Unidentified Heron","Ardeidae (gen, sp)","UNHE",6,2,4,0.00657894736842105,NA,NA,NA
+"Unidentified House Sparrow or Finch",NA,"UNFI",3,0,2,0.000877192982456139,NA,NA,NA
+"Unidentified Hummingbird","Trochilidae (gen, sp)","UNHU",92,24,68,0.0222587719298245,NA,NA,1
+"Unidentified Oriole","Icterus sp.","UNOR",3,0,3,0.00131578947368421,NA,NA,NA
+"Unidentified Owl","Strigidae (gen, sp)","UNOW",2,2,0,0.000877192982456139,NA,NA,NA
+"Unidentified Raptor",NA,"UNRA",6,3,3,0.00131578947368421,NA,NA,NA
+"Unidentified Sparrow","Passerellidae (gen, sp)","UNSP",73,32,41,0.0302631578947368,NA,NA,NA
+"Unidentified Swallow","Hirundinidae (gen, sp)","UNSW",6,0,5,0.00482456140350877,NA,NA,NA
+"Unidentified Towhee",NA,"UNTO",4,2,2,0.00131578947368421,NA,NA,NA
+"Unidentified Warbler","Parulidae (gen, sp)","UNWA",27,3,24,0.0069298245614035,NA,NA,NA
+"Unidentified Waterfowl",NA,"UWAT",7,4,3,0.0114035087719298,NA,NA,NA
+"Unidentified Woodpecker","Picinae (gen, sp)","UNWO",3,0,2,0.000877192982456139,NA,NA,NA
+"Unidentified Wren","Troglodytidae (gen, sp)","UNWR",10,6,4,0.00219298245614035,NA,NA,NA

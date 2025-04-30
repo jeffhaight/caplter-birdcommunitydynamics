@@ -36,6 +36,7 @@ gc()
   library(RColorBrewer)
   library(scales)
   library(lterpalettefinder)
+  library(basemaps)
 ```
 
 
@@ -58,57 +59,67 @@ crs.utm <- crs(vect(st_geometry(cap)))
 # (cap.mask <- vect(bb.cap))            # a mask based on the extent of the study area
 
 
-bird.pts <- st_read("C:/Research/CAPLTER/data/core_birds/46_bird_survey_locations_updated.shp") %>% st_transform(crs.utm) %>%
+bird.pts.all <- st_read("C:/Research/CAPLTER/data/core_birds/46_bird_survey_locations_updated.shp") %>% st_transform(crs.utm) %>%
   dplyr::select(-c("begin_date", "begin_mon", "begin_year", "end_date", "end_mon", "end_year")) # drop the time columns, since we'll get this from the bird data itself
+
+bird.pts <- bird.pts.all %>% 
+  filter(loc_type %in% c("ESCA", "riparian") )%>%  
+  filter(!site_code == "M-9")
 ```
+
+
 # Impervious Surface (NDBI) Maps
 ```{r warning = FALSE}
 list.files("C:/Research/CAPLTER/data/spatial/longtermenv/_NDBI")
 setwd("C:/Research/CAPLTER/data/spatial/longtermenv/_NDBI")
 c(rast("./NDBI_multiseason_CAPLTER_2001.tif"), rast("./NDBI_multiseason_CAPLTER_2002.tif"))[[7]]
 
-ndbi <- c(rast("./NDBI_multiseason_CAPLTER_2001.tif")[[-1]],
+ndbi <- c(rast("./NDBI_multiseason_CAPLTER_2001.tif"),#[[-1]],,
          # rast("./NDBI_multiseason_CAPLTER_2002.tif")[[-1]],
          # rast("./NDBI_multiseason_CAPLTER_2003.tif")[[-1]],
-         rast("./NDBI_multiseason_CAPLTER_2004.tif")[[-1]],
+         rast("./NDBI_multiseason_CAPLTER_2004.tif"),#[[-1]],
          # rast("./NDBI_multiseason_CAPLTER_2005.tif")[[-1]],
          # rast("./NDBI_multiseason_CAPLTER_2006.tif")[[-1]],
-         rast("./NDBI_multiseason_CAPLTER_2007.tif")[[-1]],
+         rast("./NDBI_multiseason_CAPLTER_2007.tif"),#[[-1]],
          # rast("./NDBI_multiseason_CAPLTER_2008.tif")[[-1]],
          # rast("./NDBI_multiseason_CAPLTER_2009.tif")[[-1]],
-         rast("./NDBI_multiseason_CAPLTER_2010.tif")[[-1]],
+         rast("./NDBI_multiseason_CAPLTER_2010.tif"),#[[-1]],
          # rast("./NDBI_multiseason_CAPLTER_2011.tif")[[-1]],
          # rast("./NDBI_multiseason_CAPLTER_2012.tif")[[-1]],
-         rast("./NDBI_multiseason_CAPLTER_2013.tif")[[-1]],
+         rast("./NDBI_multiseason_CAPLTER_2013.tif"),#[[-1]],
          # rast("./NDBI_multiseason_CAPLTER_2014.tif")[[-1]],
          # rast("./NDBI_multiseason_CAPLTER_2015.tif")[[-1]],
-         rast("./NDBI_multiseason_CAPLTER_2016.tif")[[-1]]
+         rast("./NDBI_multiseason_CAPLTER_2016.tif")#[[-1]]
          )
 # names(ndbi) <- paste(names(ppt), rep(c("2001","2016"), each = 4), sep = "_")
 # names(ndbi) <- paste(c("Winter", "Spring", "Summer", "Fall"), rep(c(2001, 2008, 2016), each = 4), sep = "_")
-names(ndbi) <- paste(c("Winter", "Spring", "Summer", "Fall"), rep(c(2001, 2004, 2007, 2010, 2013, 2016), each = 4), sep = "_")
+names(ndbi) <- paste(c("Annual", "Winter", "Spring", "Summer", "Fall"), rep(c(2001, 2004, 2007, 2010, 2013, 2016), each = 5), sep = "_")
 
 
 
+
+```
+
+```{r}
 ggplot() +
   # theme_minimal()+
     theme_classic() +
   geom_spatraster(data = ndbi, aes(fill = Winter_2001)) +
   scale_fill_distiller(palette = "Greys", direction = 1, na.value = "transparent", 
                        limits = c(-0.2, 0.4)) +
-  # geom_sf(data = bird.pts, size = 0.8, col = "black", fill = "transparent") +
-  # geom_sf(data = bird.pts, size = 0.5, col = "white", fill = "transparent") +
+  geom_sf(data = bird.pts, size = 2.5, col = "white", fill = "transparent", pch = 18) +
+  # geom_sf(data = bird.pts, size = 1, col = "white", fill = "transparent") +
   labs(fill = "NDBI") +
   theme(
     strip.background = element_blank(),
-    strip.text.x = element_blank(),,
+    strip.text.x = element_blank(),
+    legend.position = "none",
     # axis.title = element_text(face = "bold", size = 16)
     axis.text.x = element_text(angle = 45, vjust = 0.6, size = 8),
     axis.text.y = element_text(size = 8),
     legend.title = element_text(face = "bold")
   ) 
 ```
-
 
 ```{r}
   
