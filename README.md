@@ -1,4 +1,4 @@
-[![DOI](https://zenodo.org/badge/631009107.svg)](INSERT ZENODO URL HERE)
+
 
 # caplter-birdcommunitydynamics
 
@@ -46,7 +46,7 @@ This contains all the data files used for conducting the analyses and producing 
 |**./data/bird_survey_locations_51sites_1000mbuffer.shp**|ESRI Shapefile depicting a 1000-m radius buffer around the 51 bird censusing sites selected for analysis|
 |**./data/birdtraits_corebirds2024.csv**  		|Contains synthesized species trait data for all observed bird species|
 |**./data/envsummaries_corebirds_combined.csv**		|Long-term environmental data for bird censusing sites (Haight et al. 2024)|
-|**./data/modelinputs_CAPbirds2024.RData		|R Workspace containing all processed and combined R objects needed to conduct analyses**|
+|**./data/modelinputs_CAPbirds2024.RData**		|Contains all cleaned and combined R objects needed to conduct analyses|
 
 ---
 <div align="center"> <h3>figures</h3> </div>
