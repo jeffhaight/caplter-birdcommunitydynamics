@@ -1,0 +1,824 @@
+---
+title: "CAP Bird Community Dynamics - Generalized Linear Mixed Models"
+author: "Jeffrey Haight"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, set.seed(54321), include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE, 
+  include = TRUE,
+  cache = TRUE
+  )
+rm(list = ls())
+gc()
+```
+
+```{r packages, message = FALSE, echo = TRUE, warning = FALSE}
+  library(tidyverse)
+  library(beepr)  # for notifying you when some code is  done running
+
+# for statistical modeling
+  library(performance)  # for checking model performance (multicollinearity, VIF, overdispersion, etc.)
+  library(insight)      # for extracting a lot of useful model information, using functions like 'get_variance()'
+  library(lme4)
+  library(glmmTMB)
+  library(lmerTest)     # for getting p-values out of the lmer models
+  library(MuMIn)        # for calculating R^2, among other things
+  library(vegan)        # for multivariate community analyses
+  library(jagsUI)       # for running Bayesian models in JAGS
+  library(mgcv)         # for GAM(M)s
+  library(itsadug)      # for GAMM plotting
+
+# for plotting
+# library(ggplot2)      # should already be in the 'tidyverse'
+  library(ggpubr)       # for adding correlations and p-values to ggplot
+  library(ggeffects)    # for plotting glmm effects in ggplot
+  library(ggcorrplot)   # for correlation plots
+  library(GGally)       # similar to ggcorrplot
+  library(gghighlight)  # for highlighting groups in ggplot
+  library(RColorBrewer)
+```
+
+# Import Data
+```{r, include = FALSE}
+list.files("./data")
+
+# This contains data assembled by the '2_1_StatisticalModelingSetup_CAPbirds' file
+load("./data/modelinputs_CAPbirds2024.RData")
+
+
+data.win$site_code <- as.factor(data.spr$site_code)
+data.spr$site_code <- as.factor(data.spr$site_code)
+```
+# COMMUNITY-LEVEL ANALYSIS
+
+
+
+### GLMM: Total Bird Abundance
+
+```{r Total Bird Abundance GLMM global model - winter, warning = FALSE}
+set.seed(54321)
+# cor(data.win$temp_max, data.win$temp_min)
+# cor(data.win$temp_max_prevsum, data.win$temp_min_prevsum)
+
+# now try that with different covariates
+m.abund.winter <- glmmTMB(abundance ~ 
+          # time
+            year_std +   # year as a continuous variable
+          # current env. conditions
+            NDBI_std +
+            NDVI_std +
+            LST_std +
+            ppt_sum_std +
+          # interactions between current env. conditions
+            NDBI_std*NDVI_std +
+            NDBI_std*LST_std +
+            NDBI_std*ppt_sum_std +
+          # recent env conditions
+            NDVI_prevsum_std +
+            LST_prevsum_std +
+            ppt_sum_prevsum_std +
+          # some potential interaction effects
+            # year_std * NDBI_std +
+            # year_std * LST_std +
+            # year_std * LST_prevsum_std +
+            # year_std * ppt_sum_std +
+            # year_std * ppt_sum_prevsum_std +
+            # year_std * NDVI_prevsum_std +
+          # (1 |site_code) 
+          (1 + year_std|site_code) ##+ (1|id)
+          , data = data.win, 
+          family = nbinom2
+          )
+# check_overdispersion(m.abund.winter)
+# check_collinearity(m.abund.winter)
+# round(confint(m.abund.winter), 3)
+# ranef(m.abund.spring)
+# r2(m.abund.winter)
+summary(m.abund.winter)
+AIC(m.abund.winter)
+```
+
+```{r Total Bird Abundance GLMM global model - spring, warning = FALSE}
+set.seed(54321)
+# cor(data.win$temp_max, data.win$temp_min)
+# cor(data.win$temp_max_prevsum, data.win$temp_min_prevsum)
+
+# now try that with different covariates
+m.abund.spring <- glmmTMB(abundance ~ 
+          # time
+            year_std +   # year as a continuous variable
+          # current env. conditions
+            NDBI_std +
+            NDVI_std +
+            LST_std +
+            ppt_sum_std +
+          # interactions between current env. conditions
+            NDBI_std*NDVI_std +
+            NDBI_std*LST_std +
+            NDBI_std*ppt_sum_std +
+          # recent env conditions
+            NDVI_prevsum_std +
+            LST_prevsum_std +
+            ppt_sum_prevsum_std +
+          (1 + year_std|site_code) ##+ (1|id)
+          , data = data.spr, 
+          family = nbinom2
+          )
+# check_overdispersion(m.abund.spring)
+# check_collinearity(m.abund.spring)
+# round(confint(m.abund.spring), 3)
+# ranef(m.abund.spring)
+# r2(m.abund.spring)
+summary(m.abund.spring)
+AIC(m.abund.spring)
+```
+### GLMM: Species Richness
+```{r species richness GLMM global model - winter}
+set.seed(54321)
+m.rich.winter <- glmmTMB(rich ~
+          # time
+            year_std +   # year as a continuous variable
+          # current env. conditions
+            NDBI_std +
+            NDVI_std +
+            LST_std +
+            ppt_sum_std +
+          # interactions between current env. conditions
+            NDBI_std*NDVI_std +
+            NDBI_std*LST_std +
+            NDBI_std*ppt_sum_std +
+          # recent env conditions
+            NDVI_prevsum_std +
+            LST_prevsum_std +
+            ppt_sum_prevsum_std +
+          # some potential interaction effects
+            # year_std * NDBI_std +
+            # year_std * LST_std +
+            # year_std * LST_prevsum_std +
+            # year_std * ppt_sum_std +
+            # year_std * ppt_sum_prevsum_std +
+            # year_std * NDVI_prevsum_std +
+          # (1 |site_code) 
+          (1 + year_std|site_code) ##+ (1|id)
+          , data = data.win, 
+          family = poisson    # 'poisson' for richness
+          )
+
+# check_overdispersion(m.rich.winter)
+# check_collinearity(m.rich.winter)
+# round(confint(m.rich.winter), 3)
+# ranef(m.rich.winter)
+# r2(m.rich.winter)
+summary(m.rich.winter)
+AIC(m.rich.winter)
+
+```
+
+
+```{r species richness GLMM global model - spring}
+set.seed(54321)
+m.rich.spring <- glmmTMB(rich ~ 
+          # time
+            year_std +   # year as a continuous variable
+          # current env. conditions
+            NDBI_std +
+            NDVI_std +
+            LST_std +
+            ppt_sum_std +
+          # interactions between current env. conditions
+            NDBI_std*NDVI_std +
+            NDBI_std*LST_std +
+            NDBI_std*ppt_sum_std +
+          # recent env conditions
+            NDVI_prevsum_std +
+            LST_prevsum_std +
+            ppt_sum_prevsum_std +
+          (1 + year_std|site_code) ##+ (1|id)
+          , data = data.spr, 
+          family = poisson    # 'poisson' for richness
+          )
+
+# check_overdispersion(m.rich.spring)
+# check_collinearity(m.rich.spring)
+# round(confint(m.rich.spring), 3)
+# ranef(m.rich.spring)
+# r2(m.rich.spring)
+summary(m.rich.spring)
+AIC(m.rich.spring)
+```
+
+
+# GUILD-LEVEL ANALYSIS
+### Variation between seasons
+First, we may wonder if there is a seasonal difference in guild abundance. This can also be examined by comparing the intercepts between the two seasonal models (e.g. significant difference if the 95% CIs don't overlap, or if they don't overlap the mean)
+```{r seed dispersers - seasonal diff}
+wilcox.test(abund_SeedDisp ~ season, data = data.div) #%>% str()
+# significant difference between seasons 
+```
+
+```{r Insectivores - seasonal diff}
+wilcox.test(abund_Invert ~ season, data = data.div)
+# no significant difference between seasons
+```
+```{r pollinators - seasonal diff}
+wilcox.test(abund_pollen ~ season, data = data.div)
+# significant difference between seasons
+```
+### Variation among years
+```{r variation among years - guilds}
+# test for significant variation among years using the Kruskal-Wallis Rank Sum Test
+    kruskal.test(abund_SeedDisp ~ survey_year, data = data.win)
+    kruskal.test(abund_SeedDisp ~ survey_year, data = data.spr)
+    
+    kruskal.test(abund_Invert ~ survey_year, data = data.win)
+    kruskal.test(abund_Invert ~ survey_year, data = data.spr)
+    
+    kruskal.test(abund_pollen ~ survey_year, data = data.win)
+    kruskal.test(abund_pollen ~ survey_year, data = data.spr)
+
+```
+
+
+### GLMM: Seed Dispersers
+
+```{r seed dispersers abundance GLMM global model - winter, warning = FALSE}
+set.seed(54321)
+
+# now try that with different covariates
+m.seed.winter <- glmmTMB(abund_SeedDisp ~ 
+          # time
+            year_std +   # year as a continuous variable
+          # current env. conditions
+            NDBI_std +
+            NDVI_std +
+            LST_std +
+            ppt_sum_std +
+          # interactions between current env. conditions
+            NDBI_std*NDVI_std +
+            NDBI_std*LST_std +
+            NDBI_std*ppt_sum_std +
+          # recent env conditions
+            NDVI_prevsum_std +
+            LST_prevsum_std +
+            ppt_sum_prevsum_std +
+          (1 + year_std|site_code) #+  (1|survey_year) #+ (1|id)
+          , data = data.win,   # (data.spr %>% filter(abundance < 100))
+          family = nbinom2
+          )
+
+# check_overdispersion(m.seed.winter)
+# check_collinearity(m.seed.winter)
+# round(confint(m.seed.winter), 3)
+# ranef(m.seed.winter)
+# r2(m.seed.winter)
+summary(m.seed.winter)
+AIC(m.seed.winter)
+
+# plot(ggpredict(m.seed.winter, terms = "year_std"))
+```
+
+```{r seed disperser abundance GLMM global model - spring, warning = FALSE}
+set.seed(54321)
+
+# now try that with different covariates
+m.seed.spring <- glmmTMB(abund_SeedDisp ~ 
+          # time
+            year_std +   # year as a continuous variable
+          # current env. conditions
+            NDBI_std +
+            NDVI_std +
+            LST_std +
+            ppt_sum_std +
+          # interactions between current env. conditions
+            NDBI_std*NDVI_std +
+            NDBI_std*LST_std +
+            NDBI_std*ppt_sum_std +
+          # recent env conditions
+            NDVI_prevsum_std +
+            LST_prevsum_std +
+            ppt_sum_prevsum_std +
+          (1 + year_std|site_code) 
+          , data = data.spr,
+          family = nbinom2
+          )
+
+# check_overdispersion(m.seed.spring)
+# check_collinearity(m.seed.spring)
+# round(confint(m.seed.spring), 3)
+# ranef(m.seed.spring)
+# r2(m.seed.spring)
+summary(m.seed.spring)
+AIC(m.seed.spring)
+```
+
+
+### GLMM: Insectivores
+```{r invertivore abundance GLMM global model - winter, warning = FALSE}
+
+set.seed(54321)
+
+m.invert.winter <- glmmTMB(abund_Invert ~ 
+          # time
+            year_std +   # year as a continuous variable
+          # current env. conditions
+            NDBI_std +
+            NDVI_std +
+            LST_std +
+            ppt_sum_std +
+          # interactions between current env. conditions
+            NDBI_std*NDVI_std +
+            NDBI_std*LST_std +
+            NDBI_std*ppt_sum_std +
+          # recent env conditions
+            NDVI_prevsum_std +
+            LST_prevsum_std +
+            ppt_sum_prevsum_std +
+          (1 + year_std|site_code) 
+          , data = data.win,
+          family = nbinom2
+          )
+
+# check_overdispersion(m.invert.winter)
+# check_collinearity(m.invert.winter)
+# round(confint(m.invert.winter), 3)
+# ranef(m.invert.winter)
+# r2(m.invert.winter)
+summary(m.invert.winter)
+AIC(m.invert.winter)
+```
+```{r invertivore abundance GLMM global model - spring, warning = FALSE}
+
+set.seed(54321)
+
+# now try that with different covariates
+m.invert.spring <- glmmTMB(abund_Invert ~
+          # time
+            year_std +   # year as a continuous variable
+          # current env. conditions
+            NDBI_std +
+            NDVI_std +
+            LST_std +
+            ppt_sum_std +
+          # interactions between current env. conditions
+            NDBI_std*NDVI_std +
+            NDBI_std*LST_std +
+            NDBI_std*ppt_sum_std +
+          # recent env conditions
+            NDVI_prevsum_std +
+            LST_prevsum_std +
+            ppt_sum_prevsum_std +
+          (1 + year_std|site_code) 
+          , data = data.spr,
+          family = nbinom2
+          )
+
+# check_overdispersion(m.invert.spring)
+# check_collinearity(m.invert.spring)
+# round(confint(m.invert.spring), 3)
+# ranef(m.invert.spring)
+# r2(m.invert.spring)
+summary(m.invert.spring)
+AIC(m.invert.spring)
+```
+
+
+### GLMM: Pollinators
+Models of pollinator abundance with the random slope effect may fail to converge because there's not enough among-site variance (in trends of pollinator abundance)
+```{r pollinator abundance model - winter, warning = FALSE}
+
+set.seed(54321)
+
+m.pol.winter <- glmmTMB(abund_pollen ~ 
+          # time
+            year_std +   # year as a continuous variable
+          # current env. conditions
+            NDBI_std +
+            NDVI_std +
+            LST_std +
+            ppt_sum_std +
+          # interactions between current env. conditions
+            NDBI_std*NDVI_std +
+            NDBI_std*LST_std +
+            NDBI_std*ppt_sum_std +
+          # recent env conditions
+            NDVI_prevsum_std +
+            LST_prevsum_std +
+            ppt_sum_prevsum_std +
+          # (1 + year_std|site_code)
+          (1 |site_code)
+          , data = data.win,
+          family = nbinom2
+          )
+
+# check_overdispersion(m.pol.winter)
+# check_collinearity(m.pol.winter)
+# round(confint(m.pol.winter), 3)
+# ranef(m.pol.winter)
+# r2(m.pol.winter)
+# summary(m.pol.winter)
+AIC(m.pol.winter)
+
+
+
+  
+```
+
+```{r pollinator abundance model - spring, warning = FALSE}
+
+set.seed(54321)
+
+m.pol.spring <- glmmTMB(abund_pollen ~ 
+          # time
+            year_std +   # year as a continuous variable
+          # current env. conditions
+            NDBI_std +
+            NDVI_std +
+            LST_std +
+            ppt_sum_std +
+          # interactions between current env. conditions
+            NDBI_std*NDVI_std +
+            NDBI_std*LST_std +
+            NDBI_std*ppt_sum_std +
+          # recent env conditions
+            NDVI_prevsum_std +
+            LST_prevsum_std +
+            ppt_sum_prevsum_std +
+          # (1 + year_std|site_code)
+          (1 |site_code)
+          , data = data.spr,
+          family = nbinom2
+          )
+
+# check_overdispersion(m.pol.spring)
+# check_collinearity(m.pol.spring)
+# round(confint(m.pol.spring), 3)
+# ranef(m.pol.spring)
+# r2(m.pol.spring)
+summary(m.pol.spring)
+AIC(m.pol.spring)
+```
+
+
+# COMBINE EXPORT MODEL RESULTS
+
+
+
+```{r model fixed effects}
+rownames(confint(m.pol.winter))
+
+m.coef <- data.frame(
+  rbind(
+    confint(m.abund.winter),
+    confint(m.rich.winter),
+    confint(m.seed.winter),
+    confint(m.invert.winter),
+    confint(m.pol.winter),
+    confint(m.abund.spring),
+    confint(m.rich.spring),
+    confint(m.seed.spring),
+    confint(m.invert.spring),
+    confint(m.pol.spring)
+  )
+) %>% rownames_to_column("parameter")
+
+# filter out the random effect parameters
+m.coef <- m.coef %>% 
+  filter(!grepl('Std.Dev', parameter)) %>% 
+  filter(!grepl('Cor.', parameter))  %>% 
+  filter(!grepl('NA', parameter)) 
+
+
+# add the standard errors and p-values to the table
+m.coef <- cbind(m.coef, rbind(
+    summary(m.abund.winter)$coefficients$cond[,c(2,4)],
+    summary(m.rich.winter)$coefficients$cond[,c(2,4)],
+    summary(m.seed.winter)$coefficients$cond[,c(2,4)],
+    summary(m.invert.winter)$coefficients$cond[,c(2,4)],
+    summary(m.pol.winter)$coefficients$cond[,c(2,4)],
+    summary(m.abund.spring)$coefficients$cond[,c(2,4)],
+    summary(m.rich.spring)$coefficients$cond[,c(2,4)],
+    summary(m.seed.spring)$coefficients$cond[,c(2,4)],
+    summary(m.invert.spring)$coefficients$cond[,c(2,4)],
+    summary(m.pol.spring)$coefficients$cond[,c(2,4)]
+  ))
+
+
+colnames(m.coef) <- c("parameter", "lower95", "upper95", "estimate", "se", "p_value")
+  
+params <- c("Intercept", "Time (Year)", "Impervious Surface", 
+          "Vegetation (Current)", "Temperature (Current)", "Precipitation (Current)",
+          "Vegetation (Recent)", "Temperature (Recent)", "Precipitation (Recent)",
+          "Impervious Surface X\nVegetation Interaction", 
+          "Impervious Surface X\nTemperature Interaction", 
+          "Impervious Surface X\nPrecipitation Interaction"#,
+          #"Random Intercept by Site (SD)", "Random Time Slope by Site (SD)", "Random Effect Correlation"
+          )
+# responses <- c("Total Bird Abundance", "Species Richness)
+responses <- c("Total Bird Abundance", "Species Richness", 
+               "Seed Dispersers", "Insectivores", "Pollinators")
+seasons <- c("Winter", "Spring")
+
+n.param <- length(params)
+n.responses <- length(responses)
+n.seasons <- length(seasons)
+
+
+m.coef$parameter <- rep(params, n.responses*n.seasons)
+m.coef$param_ord <- as.factor(rep(1:n.param, n.responses*n.seasons))
+m.coef$param_ord_rev <- as.factor(rep(rev(1:n.param), n.responses*n.seasons))
+# m.coef$param_ord <- factor(rep(1:n.param, n.responses*n.seasons),
+#                                     levels = rev(params))
+
+m.coef$response <- rep(rep(responses, each = n.param), n.seasons)
+m.coef$response_ord <- as.factor(rep(rep(1:n.responses, each = n.param), n.seasons))
+m.coef$response_ord_rev <- as.factor(rep(rep(rev(1:n.responses), each = n.param), n.seasons))
+
+m.coef$season <- rep(seasons, each = n.param*n.responses)
+m.coef$season <- factor(m.coef$season, levels = c("Winter", "Spring"))
+
+# set the parameter as a factor with levels according to the order you want to plot the fixed effects
+m.coef$parameter <- factor(m.coef$parameter, levels = unique(m.coef$parameter))
+
+m.coef
+
+m.coef %>% arrange(lower95)        # lowest range of fixed effects at about -0.63
+m.coef %>% arrange(desc(upper95))  # highest range of fixed effects at about -0.48
+
+#
+m.coef$CI_95 <- paste(round(m.coef$lower95, 3), round(m.coef$upper95, 3), sep = ", ")
+m.coef <- m.coef %>% arrange(response_ord, desc(season))
+write.csv(m.coef, "./data/modeloutputs_fixedeffectestimates.csv", row.names = FALSE)
+```
+```{r model variances, warning = FALSE}
+m.r2 <- cbind(
+  rep(responses, length(seasons)),
+  rep(seasons, each = length(responses)),
+  rbind(
+    r2(m.abund.winter),
+    r2(m.rich.winter),
+    r2(m.seed.winter),
+    r2(m.invert.winter),
+    r2(m.pol.winter),
+    r2(m.abund.spring),
+    r2(m.rich.spring),
+    r2(m.seed.spring),
+    r2(m.invert.spring),
+    r2(m.pol.spring)
+))
+m.r2
+```
+
+```{r model random effects}
+summary(m.abund.winter) %>% str()
+```
+
+# PLOT FIXED EFFECTS
+```{r abundance effects}
+brewer.pal(8, "Dark2")
+# Eight colors "#1B9E77" "#D95F02" "#7570B3" "#E7298A" "#66A61E" "#E6AB02" "#A6761D" "#666666"
+pal.abund <- c("#E7298A","#66A61E","#E6AB02",  "#666666")
+
+plot.winter <- m.coef %>% filter(!response == "Species Richness") %>% 
+  filter(season == "Winter") %>%
+  filter(!parameter %in% c("Intercept", "Random Intercept by Site (SD)", 
+                           "Random Time Slope by Site (SD)", "Random Effect Correlation")) %>%
+ggplot(aes(x = param_ord_rev, y = estimate, color = response_ord_rev, fill = response_ord_rev)) +
+  geom_hline(yintercept = 0, linetype="dashed", color = "gray20") +
+  geom_linerange(aes(ymin = lower95, ymax = upper95),linewidth = 1, position = position_dodge2(width=0.7)) +
+  geom_point(aes(shape = response_ord_rev), size = 1.5, position = position_dodge2(width=0.7), color = "gray20") +
+  scale_x_discrete(labels = rev(params[-1])) +
+  scale_shape_manual(values = c(23, 22, 24, 21)) +
+  # scale_shape_manual(values = c(18, 15, 16, 17)) +
+  scale_color_manual(labels = rev(responses[c(1,2,3,5)]), values = pal.abund) +
+  scale_fill_manual(labels = rev(responses[c(1,2,3,5)]), values = pal.abund) +
+  # coord_cartesian(xlim = c(-0.35, 0.35)) +
+  coord_flip(ylim = c(-0.90, 0.90)) +
+  labs(x = "Fixed Effect", y = "Estimate")+
+  theme(
+    legend.position = "none",
+    # axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size = 8)
+    axis.text.y = element_text(size = 8),
+    axis.title = element_text(face = "bold", size = 10)
+  )
+plot.winter
+
+
+plot.spring <- m.coef %>% filter(!response == "Species Richness") %>% 
+  filter(season == "Spring") %>%
+  filter(!parameter %in% c("Intercept", "Random Intercept by Site (SD)", 
+                           "Random Time Slope by Site (SD)", "Random Effect Correlation")) %>%
+ggplot(aes(x = param_ord_rev, y = estimate, color = response_ord_rev, fill = response_ord_rev)) +
+  # theme_minimal() +
+  geom_hline(yintercept = 0, linetype="dashed", color = "gray20") +
+  geom_linerange(aes(ymin = lower95, ymax = upper95),linewidth = 1, position = position_dodge2(width=0.7)) +
+  geom_point(aes(shape = response_ord_rev), size = 1.5, position = position_dodge2(width=0.7), color = "gray20") +
+  scale_x_discrete(labels = rev(params[-1])) +
+  scale_shape_manual(values = c(23, 22, 24, 21)) +
+  # scale_shape_manual(values = c(18, 15, 16, 17)) +
+  scale_color_manual(labels = rev(responses[c(1,2,3,5)]), values = pal.abund) +
+  scale_fill_manual(labels = rev(responses[c(1,2,3,5)]), values = pal.abund) +
+  # coord_cartesian(xlim = c(-0.35, 0.35)) +
+  coord_flip(ylim = c(-0.9, 0.9)) +
+  labs(x = "Fixed Effect", y = "Estimate")+
+  theme(
+    legend.position = "none",
+    # axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size = 8)
+    axis.text.y = element_text(size = 8),
+    axis.title = element_text(face = "bold", size = 10)
+  )
+plot.spring
+
+list.files("./figures/effects_env")
+ggsave("./figures/effects_env/fig1_modeleffects_abundance_1winter.png",
+         plot.winter,
+         width = 4,
+         height = 4,
+         units = "in",
+         dpi = 300)
+
+ggsave("./figures/effects_env/fig1_modeleffects_abundance_2spring.png",
+       plot.spring,
+       width = 5,
+       height = 4,
+       units = "in",
+       dpi = 300)
+```
+
+```{r}
+plot.both <- m.coef %>% filter(!response == "Species Richness") %>% 
+  # filter(season == "2_spring") %>%
+  filter(!parameter %in% c("Intercept", "Random Intercept by Site (SD)", 
+                           "Random Time Slope by Site (SD)", "Random Effect Correlation")) %>%
+ggplot(aes(x = param_ord_rev, y = estimate, color = response_ord_rev, fill = response_ord_rev)) +
+  # theme_minimal() +
+  geom_hline(yintercept = 0, linetype="dashed", color = "gray20") +
+  geom_linerange(aes(ymin = lower95, ymax = upper95),linewidth = 1, position = position_dodge2(width=0.7)) +
+  geom_point(aes(shape = response_ord_rev), size = 1, position = position_dodge2(width=0.7), color = "gray20") +
+  # geom_pointrange(aes(ymin = lower95, ymax = upper95, shape = response_ord_rev),linewidth = 1, position = position_dodge2(width=0.7), color = "gray20") +
+  scale_x_discrete(labels = rev(params[-1])) +  # drop the intercept 
+  scale_shape_manual(values = c(23, 22, 24, 21)) +
+  # scale_shape_manual(values = c(18, 15, 16, 17)) +
+  scale_color_manual(labels = rev(responses[c(1,2,3,5)]), values = pal.abund) +
+  scale_fill_manual(labels = rev(responses[c(1,2,3,5)]), values = pal.abund) +
+  # coord_cartesian(xlim = c(-0.35, 0.35)) +
+  coord_flip(ylim = c(-0.9, 0.9)) +
+  labs(x = "Fixed Effect", y = "Estimate")+
+  theme(
+    legend.position = "none",
+    # legend.position="bottom", legend.box = "horizontal",
+    # axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size = 8)
+    axis.text.y = element_text(size = 8),
+    axis.title = element_text(face = "bold", size = 10)
+  ) + facet_grid(cols = vars(season))
+plot.both
+
+ggsave("./figures/effects_env/fig1_modeleffects_abundance_bothseasons.png",
+       plot.both,
+       width = 6,
+       height = 3.75,
+       units = "in",
+       dpi = 600)
+```
+
+
+```{r}
+plot.both <- m.coef %>% filter(response == "Species Richness") %>% 
+  # filter(season == "1_winter") %>%
+  filter(!parameter %in% c("Intercept", "Random Intercept by Site (SD)", 
+                           "Random Time Slope by Site (SD)", "Random Effect Correlation")) %>%
+ggplot(aes(x = param_ord_rev, y = estimate)) +
+  # theme_minimal() +
+  geom_hline(yintercept = 0, linetype="dashed", color = "gray20") +
+  geom_linerange(aes(ymin = lower95, ymax = upper95),linewidth = 1, position = position_dodge2(width=0.7), color = "blue3") +
+  geom_point(aes(shape = response_ord_rev), size = 2, color = "gray20", fill = "blue3", pch = 21) +
+  # coord_cartesian(xlim = c(-0.35, 0.35)) +
+  scale_x_discrete(labels = rev(params[-1])) +
+  coord_flip(ylim = c(-0.20, 0.20)) +
+  labs(x = "Fixed Effect", y = "Estimate")+
+  theme(
+    legend.position = "none",
+    # legend.position="bottom", legend.box = "horizontal",
+    # axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size = 8)
+    axis.text.y = element_text(size = 8),
+    axis.title = element_text(face = "bold", size = 10)
+  ) + facet_grid(cols = vars(season))
+plot.both
+
+
+ggsave("./figures/effects_env/fig1_modeleffects_richness_bothseasons.png",
+       plot.both,
+       width = 6,
+       height = 3.75,
+       units = "in",
+       dpi = 600)
+
+```
+
+
+
+
+```{r all response variables - wide}
+# figure formatted for the 2024 ESA Annual Meeting poster
+
+plot.both <- m.coef %>%# filter(!response == "Species Richness") %>% 
+  # filter(season == "2_spring") %>%
+  filter(!parameter %in% c("Intercept", "Random Intercept by Site (SD)", 
+                           "Random Time Slope by Site (SD)", "Random Effect Correlation")) %>%
+ggplot(aes(x = param_ord_rev, y = estimate, color = response_ord_rev, fill = response_ord_rev)) +
+  theme_bw() +
+  geom_hline(yintercept = 0, linetype="dashed", color = "gray20") +
+  geom_errorbar(aes(ymin = lower95, ymax = upper95), width = 0.5, linewidth = 0.5, position = position_dodge(width = 0.7), alpha = 0.8) +
+  geom_point(aes(shape = response_ord_rev), size = 1.5, position = position_dodge2(width=0.7), color = "gray20") +
+  # geom_pointrange(aes(ymin = lower95, ymax = upper95, shape = response_ord_rev),linewidth = 1, position = position_dodge2(width=0.7), color = "gray20") +
+  # scale_x_discrete(labels = c("Impervious Surface X Precipitation Interaction", 
+  #                             "Impervious Surface X Temperature Interaction", 
+  #                             "Impervious Surface X Vegetation Interaction",
+  #                             "Precipitation (Recent)" , "Temperature (Recent)", "Vegetation (Recent)", 
+  #                             "Precipitation (Current)", "Temperature (Current)","Vegetation (Current)", 
+  #                             "Impervious Surface" ,  "Time (Year)")) +  # drop the intercept 
+  scale_x_discrete(labels = rev(params[-1])) +  
+  scale_shape_manual(values = c(23, 22, 24, 21, 21)) +
+  # scale_shape_manual(values = c(18, 15, 16, 17)) +
+  scale_color_manual(labels = rev(responses), values = c(pal.abund[c(1,2,3)], "#0000cd", "gray50")) +
+  scale_fill_manual(labels = rev(responses), values = c(pal.abund[c(1,2,3)], "#0000cd", "gray50")) +
+  # coord_cartesian(xlim = c(-0.35, 0.35)) +
+  coord_flip(ylim = c(-0.9, 0.9)) + 
+  facet_grid(cols = vars(season)) +
+  labs(x = "Fixed Effect", y = "Estimate")+
+  theme(
+    legend.position = "none",
+    # legend.position="bottom", legend.box = "horizontal",
+    # axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size = 8)
+    axis.text.y = element_text(size = 14),
+    axis.title = element_text(face = "bold", size = 16)) 
+plot.both
+
+
+ggsave("./figures/effects_env/fig1_modeleffects_allresponses_bothseasons_wide.png",
+       plot.both,
+       width = 12,
+       height = 6,
+       units = "in",
+       dpi = 600)
+
+```
+
+
+
+```{r all response variables - long}
+# figure formatted for the 2024 ESA Annual Meeting poster
+
+plot.both <- m.coef %>%# filter(!response == "Species Richness") %>% 
+  # filter(season == "2_spring") %>%
+  filter(!parameter %in% c("Intercept", "Random Intercept by Site (SD)", 
+                           "Random Time Slope by Site (SD)", "Random Effect Correlation")) %>%
+ggplot(aes(x = param_ord_rev, y = estimate, color = response_ord_rev, fill = response_ord_rev)) +
+  theme_bw() +
+  geom_hline(yintercept = 0, linetype="dashed", color = "gray20") +
+  # geom_linerange(aes(ymin = lower95, ymax = upper95),linewidth = 0.8, position = position_dodge2(width=0.6)) +
+  # geom_errorbar(aes(ymin = lower95, ymax = upper95),linewidth = 0.8, position = position_dodge2(width=0.6)) +
+  geom_errorbar(aes(ymin = lower95, ymax = upper95), width = 0.5, linewidth = 0.5, position = position_dodge(width = 0.7), alpha = 0.8) +
+  geom_point(aes(shape = response_ord_rev), size = 2, position = position_dodge2(width=0.7), color = "gray20") +
+  # geom_pointrange(aes(ymin = lower95, ymax = upper95, shape = response_ord_rev),linewidth = 1, position = position_dodge2(width=0.7), color = "gray20") +
+  # scale_x_discrete(labels = c("Impervious Surface X Precipitation Interaction", 
+  #                             "Impervious Surface X Temperature Interaction", 
+  #                             "Impervious Surface X Vegetation Interaction",
+  #                             "Precipitation (Recent)" , "Temperature (Recent)", "Vegetation (Recent)", 
+  #                             "Precipitation (Current)", "Temperature (Current)","Vegetation (Current)", 
+  #                             "Impervious Surface" ,  "Time (Year)")) +  # drop the intercept 
+  scale_x_discrete(labels = rev(params[-1])) +  
+  scale_shape_manual(values = c(23, 22, 24, 21, 21)) +
+  # scale_shape_manual(values = c(18, 15, 16, 17)) +
+  scale_color_manual(labels = rev(responses), values = c(pal.abund[c(1,2,3)], "#0000cd", "gray60")) +
+  scale_fill_manual(labels = rev(responses), values = c(pal.abund[c(1,2,3)], "#0000cd", "gray60")) +
+  # coord_cartesian(xlim = c(-0.35, 0.35)) +
+  coord_flip(ylim = c(-0.9, 0.9)) + 
+  facet_grid(cols = vars(season)) +
+  labs(x = "Fixed Effect", y = "Estimate")+
+  theme(
+    legend.position = "none",
+    # legend.position="bottom", legend.box = "horizontal",
+    # axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size = 8)
+    axis.text.y = element_text(size = 8),
+    axis.title = element_text(face = "bold", size = 10)) 
+plot.both
+
+
+ggsave("./figures/effects_env/fig1_modeleffects_allresponses_bothseasons_long.png",
+       plot.both,
+       width = 6.5,
+       height = 5.5,
+       units = "in",
+       dpi = 600)
+
+```
+
+
+# BONUS
+\

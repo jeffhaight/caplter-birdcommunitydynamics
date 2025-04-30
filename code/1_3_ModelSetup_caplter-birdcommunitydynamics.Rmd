@@ -1,0 +1,1363 @@
+---
+title: "CAP Bird Community Dynamics - Model Setup & Testing"
+author: "Jeffrey Haight"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE, 
+  include = TRUE
+  )
+rm(list = ls())
+gc()
+```
+
+```{r packages, message = FALSE, echo = TRUE}
+library(beepr)
+library(vegan)
+
+library(sf)
+library(terra)
+library(tidyverse)
+library(tidyterra)  # tidyverse methods for SpatRaster and SpatVector objects (including ggplot functions)
+# library(tidycensus)
+#library(tmap)
+#library(stars)
+library(ggcorrplot)
+library(GGally)
+library(ggpubr)   # for adding correlations and p-values to ggplot
+
+# Census data settings
+# options(tigris_use_cache = TRUE)
+#census_api_key("fd53ba9b6b6ab4fa5a0fcf329401ae7d3184dc6a", install = TRUE) # set the Census API key
+
+
+# for statistical modeling
+library(lme4)
+library(glmmTMB)
+library(lmerTest)   # for getting p-values out of the lmer models
+library(MuMIn)
+library(performance)
+#library(regclass)
+library(GLMMadaptive)   # for calculating VIF for 'glmmTMB' models
+```
+
+# Import Data
+```{r, include = FALSE}
+list.files("~/GitHub/caplter-birdcommunitydynamics/data")
+```
+### Bird species traits
+```{r, echo = TRUE}
+birdtraits.all <- read.csv("~/GitHub/caplter-birdcommunitydynamics/data/birdtraits_corebirds2024.csv")
+# birdtraits.all$SeedDisperser <- as.factor(birdtraits.all$SeedDisperser)
+
+
+```
+
+### Species observation data
+```{r import species obs data, echo = TRUE, message = FALSE}
+obs.all <- read.csv("~/GitHub/caplter-birdcommunitydynamics/data/bird_observations_countmeanbyseason.csv", header = TRUE)
+#str(obs.all)
+
+# the abundance data for each bird count (by-survey)
+  bird.counts <- readRDS("~/GitHub/caplter-birdcommunitydynamics/data/bird_observations_countbysurvey.rds")
+  K <- readRDS("~/GitHub/caplter-birdcommunitydynamics/data/bird_observations_surveycount.rds")
+
+```
+
+```{r process species obs data, echo = TRUE, message = FALSE}
+# subset the observation data by sites and study period
+obs <- obs.all %>%
+  filter(season %in% c("1_winter", "2_spring")) %>%
+  filter(location_type %in% c("ESCA", "riparian")) %>%
+  filter(survey_year <= 2016 & survey_year >= 2001) %>%
+  # filter(n_survey >= 3) %>%
+  filter(!survey_year == 2003) %>%   # Following Allen et al and Albuquerque et al.
+  filter(!site_code == "M-9")  %>%    # M-9 was only surveyed in 2001
+  # number of surveys in which each species was observed across the whole study period
+  group_by(code) %>% mutate(det_project = sum(det_survey, na.rm = TRUE)) %>%
+  # Finally, what are the seasonal bird communities? 
+  # Which species were observed in winter and/or spring, across the whole study period?
+  # Give those a 1 in the new 'det_season' column if they were detected in that season
+  group_by(season, code) %>% mutate(det_season = sum(det_survey)) %>% ungroup() %>% arrange(code)
+  
+
+# Select the species to include in the analysis
+  # 63 species were only ever observed once across the whole project
+  obs %>% filter(det_project <= 1) %>% pull(code) %>% unique() %>% length()
+  # but our analysis is by-season, so we should keep only species observed more than once in any given season
+  
+  # 111 species were only observed once across all winter surveys
+  obs %>% filter(season == "1_winter") %>% filter(det_season <= 1) %>% pull(code) %>% unique() %>% length()
+  # 102 species were only observed once across all spring surveys
+  obs %>% filter(season == "2_spring") %>% filter(det_season <= 1) %>% pull(code) %>% unique() %>% length()
+  
+  spp.analyze <- obs %>% group_by(code) %>%  filter(det_season > 1) %>%
+  filter(!code %in% c("DODU", "DOGO", "ISCA", "CHGO")) %>%  # remove domestic species here as well
+    pull(code) %>% unique()
+  
+  # this should leave out certain species that were lacking certain trait data
+  # obs.all %>% filter(code == "AFCD") %>% filter(count_mean > 0) %>% nrow()   # African Collared-Dove
+  # obs.all %>% filter(code == "BRTI") %>% filter(count_mean > 0) %>% nrow()   # Bridled Titmouse
+  # obs.all %>% filter(code == "CCLO") %>% filter(count_mean > 0) %>% nrow()   # Chestnut-collared Longspur
+  # obs.all %>% filter(code == "AFCD") %>% filter(count_mean > 0) %>% nrow() 
+  
+  # as well as the domestic species
+  # obs.all %>% filter(code == "ISCA") %>% filter(count_mean > 0) %>% nrow()   # only one
+  # obs.all %>% filter(code == "DODU") %>% filter(count_mean > 0) %>% nrow()
+  # obs.all %>% filter(code == "DOGO") %>% filter(count_mean > 0) %>% nrow()
+  # obs.all %>% filter(code == "CHGO") %>% filter(count_mean > 0) %>% nrow()   # only one
+  
+#obs
+# str(obs)
+# colnames(obs)
+
+  # now we can select our species to analyze and join the observation data with the trait data
+  obs <- obs %>% filter(code %in% spp.analyze) %>% filter(det_season > 1) %>%  left_join(birdtraits.all)
+  
+# Create lists of identified (all species and excluding rare species) vs. unidentified species
+  spp.known.all <- obs.all %>% filter(!grepl("Unidentified", common_name)) %>% pull(code) %>% unique()
+  spp.known <- obs %>% filter(!grepl("Unidentified", common_name)) %>% pull(code) %>% unique()
+  spp.unknown <- obs %>% filter(grepl("Unidentified", common_name)) %>% pull(code) %>% unique()
+  
+  # Species observed in each season, across the entire study period
+  length(spp.winter <- obs %>% filter(code %in% spp.known) %>% filter(season == "1_winter") %>% 
+    filter(det_season > 0) %>% pull(code) %>% unique() )
+  length(spp.spring <- obs %>% filter(code %in% spp.known) %>% filter(season == "2_spring") %>% 
+    filter(det_season > 0) %>% pull(code) %>% unique())   
+
+  
+# filter by observed species and join with the bird traits  
+  
+# There are no Cultural trait data for these five introduced species:
+    # Rosy-faced Lovebird: n = 47***
+    # Black-tailed Gnatcatcher: n = 464***; morphologically similar to CA Gnatcatcher (Polioptila californica)
+    # Bendire's Thrasher n = 16***; morphologically similar to Curve-billed Thrasher
+    # Crissal Thrasher n = 5***; morphologically similar to CA Thrasher
+    # Plumbeous Vireo: n = 7***; very similar to  Cassin's Vireo and formerly considered the same species
+
+
+
+# subset the by-survey counts as well
+  bird.counts <- bird.counts[
+    which(dimnames(bird.counts)[[1]] %in% sort(unique(obs$site_code))),
+    which(dimnames(bird.counts)[[2]] %in% sort(unique(obs$code))),
+    ,
+    which(dimnames(bird.counts)[[4]] %in% sort(unique(obs$survey_year))),
+    which(dimnames(bird.counts)[[5]] %in% sort(unique(obs$season)))
+    ]
+
+# recalculate the mean bird counts per survey (essentialy recalculating 'count_mean' in 'obs')
+str(
+  bird.counts.mean <- apply(bird.counts, MARGIN = c(1,2,4,5), FUN = 'mean', na.rm = TRUE)
+  )
+bird.counts.mean[is.nan(bird.counts.mean)== TRUE] <- NA
+
+
+# 75 species have been set aside
+  # these 37 are species we have traits data for, but not observation data, after it's been filtered by distance
+  # birdtraits %>% filter(!code %in% unique(obs.all$code)) %>% pull(common_name) 
+  # and these 38 are species observed only once, as well as two other domestic species
+  # obs.all %>% filter(!code %in% unique(obs$code)) %>% pull(common_name) %>% unique()
+
+
+
+# obs %>% filter(count_mean > 30)
+
+# Now, if we want to keep including the 'unidentified' species in the abundance 
+  # measurements, but exclude them from the richness/diversity measurements, 
+  # we can set the 'det' column for these species to 0
+  # because that is the column we will use to calculate species richness
+    obs[which(obs$code %in% spp.unknown & obs$count_mean > 0),]$det  <- 0
+    
+    obs %>% filter(code %in% spp.unknown) %>% filter(count_mean > 0) %>% nrow() # number of 'unidentified' observations
+    obs  %>% filter(count_mean > 0) %>% nrow() # number of non-zero observations
+    
+    obs  %>% group_by(site_code, survey_year, season) %>% slice(1) %>% arrange(survey_year, season) %>%
+      ungroup() %>% summarize(n_site = length(site_code), .by = c(survey_year, season))
+
+    
+    # hist(obs$count_mean, breaks = 100)
+    # hist(obs$count_weight_con, breaks = 100)
+    
+    obs %>% 
+      filter(season == "1_winter") %>%
+      filter(Pollinator == 1) %>% 
+      filter(det > 0) 
+    # 424 are Anna's
+    # 64 are Costa's
+    # 6 are WWDO
+
+    
+    
+obs %>% filter(code == "ABTO") %>% summarize(n_site = length(site_code), .by = c(survey_year, season)) %>% arrange(n_site)
+```
+
+
+
+### Environmental data for core bird survey sites
+
+Haight, J., De Albuquerque, F. & Frazier, A. Seasonal and annual summary statistics of urbanization, vegetation, land surface temperature, and bioclimatic variables derived from remotely-sensed imagery in areas surrounding long-term bird monitoring locations in the greater Phoenix, Arizona, USA metropolitan area (1997-2023). Environmental Data Initiative https://doi.org/10.6073/PASTA/9D44CD85F881586D6D06E7A7293E833C (2024).
+
+```{r, message = FALSE}
+# Import the by-site environmental summary data sourced from the CAP LTER database
+data.env <- read.csv("~/GitHub/caplter-birdcommunitydynamics/data/envsummaries_corebirds_combined.csv") %>%
+   filter(region == "1000 m buffer") %>%
+  select(-c(region, statistic))
+    
+    
+# rename the 'year' columns to match
+  colnames(data.env)[which(colnames(data.env)=="year")]
+  colnames(data.env)[which(colnames(data.env)=="year")] <- "survey_year"
+  
+  # str(data.env)
+```
+
+
+# Process Environmental Data
+### Create bioclimatic lag variables
+For certain variables, we may want to include a lag effect - e.g. hot dry summers can have negative effects on winter and spring abundance and richness in the following year
+```{r recent climate, echo = TRUE}
+time_lag_yr <- 1
+
+data.env.prevsummer <- data.env %>% filter(season == "3_summer") %>% 
+  select(survey_year, site_code, season, NDBI, NDVI, LST, temp_max, temp_min, ppt_sum) %>%
+  mutate(survey_year = survey_year + time_lag_yr) %>% # add a year so that they can be merged
+  as.data.frame() %>% select(-c(season))  #%>%
+  # filter(survey_year %in% unique(obs$survey_year)) #%>%
+  # filter(site_code %in% unique(obs$site_code))
+
+colnames(data.env.prevsummer) <- c("survey_year", "site_code", "NDBI_prevsum", "NDVI_prevsum", "LST_prevsum", 
+                                   "temp_max_prevsum", "temp_min_prevsum", "ppt_sum_prevsum")
+
+
+data.env.prevyear <- data.env %>% filter(season == "annual") %>%
+  select(survey_year, site_code, season, NDBI, NDVI, LST, temp_max, temp_min, ppt_sum, NDVI) %>%
+  mutate(survey_year = survey_year + time_lag_yr) %>% 
+  as.data.frame() %>% select(-c(season))
+colnames(data.env.prevyear) <- c("survey_year", "site_code", "NDBI_prevyear", "NDVI_prevyear", "LST_prevyear", 
+                                 "temp_max_prevyear", "temp_min_prevyear", "ppt_sum_prevyear")
+
+data.env.prevsummer
+data.env.prevyear
+
+ggplot() +
+  geom_point(data = data.env.prevyear, aes(x = survey_year, y = ppt_sum_prevyear))
+
+data.env <- left_join(left_join(data.env, data.env.prevsummer), data.env.prevyear) #%>% as.data.frame() %>% nrow()
+
+```
+
+
+
+### Surface vs. Max Air vs. Min Air Temperature
+```{r temperature relationships, include = FALSE}
+# examine the temperature variables, which are expected to be highly collinear
+# e.g. LST and air temps
+  ggplot(data = data.env, aes (x = LST, y = temp_min)) +
+    theme_classic() +
+    stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001) +
+    labs(x = "Surface Temperature", y = "Minimum Air Temperature") +
+    geom_point() + 
+    geom_smooth(method = "lm")
+
+  ggplot(data = data.env, aes (x = LST, y = temp_max)) +
+      theme_classic() +
+      stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001) +
+      labs(x = "Surface Temperature", y = "Maximum Air Temperature") +
+      geom_point() + 
+      geom_smooth(method = "lm")
+  
+  ggplot(data = data.env, aes (x = temp_min, y = temp_max)) +
+    theme_classic() +
+    stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001) +
+    labs(x = "Minimum Air Temperature", y = "Maximum Air Temperature") +
+    geom_point() + 
+    geom_smooth(method = "lm")
+  # yup, those are all high across all seasons
+  # however, there's some variation in the relationships among seasons
+  cor(data.env$ppt_sum, data.env$temp_min, method = "spearman", use = "complete.obs")
+
+  # LST and minimum temperature are significantly correlated across all seasons
+  # but not highly (highest is in spring, when )
+  ggplot(data = data.env, aes (x = LST, y = temp_min, group = season, col = season)) +
+    theme_classic() +
+    stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001) +
+    labs(x = "Surface Temperature", y = "Minimum Air Temperature") +
+    geom_point() + 
+    geom_smooth(method = "lm")
+  
+  # LST and maximum temperature are significantly correlated 
+  ggplot(data = data.env, aes (x = LST, y = temp_max, group = season, col = season)) +
+    theme_classic() +
+    stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001) +
+    labs(x = "Surface Temperature", y = "Maximum Air Temperature") +
+    geom_point() + 
+    geom_smooth(method = "lm")
+  
+  ggplot(data = data.env, aes (x = temp_min, y = temp_max, group = season, col = season)) +
+    theme_classic() +
+    stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001) +
+    labs(x = "Minimum Air Temperature", y = "Maximum Air Temperature") +
+    geom_point() + 
+    geom_smooth(method = "lm")
+ 
+
+```
+
+### Precipitation Relationships
+```{r}
+# NDVI vs. current precipitation
+# generally a positive relationship, especially during winter and not so much during spring
+ggplot(data = data.env, aes (x = ppt_sum, y = NDVI, group = season, col = season)) +
+    theme_classic() +
+    geom_point() + 
+    stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001, color = "black") +
+    labs(x = "Precipitation", y = "NDVI") +
+    geom_smooth(method = "lm")
+
+# NDVI vs. previous summer precipitation
+# We would expect this to be positive, except for maybe fall, when green-up is associated with monsoonal rain
+ggplot(data = data.env, aes (x = ppt_sum_prevsum, y = NDVI, group = season, col = season)) +
+    theme_classic() +
+    geom_point() + 
+    stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001, color = "black") +
+    labs(x = "Precipitation (Recent Summer)", y = "NDVI") +
+    geom_smooth(method = "lm")
+
+# compared to the previous year's total precipitation, NDVI in winter and spring is higher following wetter years
+ggplot(data = data.env, aes (x = ppt_sum_prevyear, y = NDVI, group = season, col = season)) +
+    theme_classic() +
+    geom_point() + 
+    stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001, color = "black") +
+    labs(x = "Precipitation (Previous Year)", y = "NDVI") +
+    geom_smooth(method = "lm")
+
+
+# vs. air temperature
+# Air temp is generally lower at wetter sites during the warmer months, but higher during winter
+# Potentially due to lower potential evapotranspiration and evaporative cooling in the cooler season?
+# This could illustrate the moderating effects of humidity
+ggplot(data = data.env, aes (x = ppt_sum, y = temp_min, group = season, col = season)) +
+    theme_classic() +
+    geom_point() + 
+    stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001, color = "black") +
+    labs(x = "Precipitation", y = "Minimum Air Temperature") +
+    geom_smooth(method = "lm")
+```
+
+
+# Summarize Abundance and Diversity Metrics
+### Community-level abundance and diversity
+
+```{r, message = FALSE, echo = TRUE, warning = FALSE}
+# Metrics for local-level communities
+div.loc <- obs %>% #filter(code %in% c(spp.known)) %>%
+  # summarize local richness
+  summarize(
+    count_sum = sum(count_max, na.rm = TRUE),    # a count of all birds
+    n_survey = max(n_survey, na.rm = TRUE),  # number of surveys per season. 'max' because this should be the same for all species
+    abundance = sum(count_mean, na.rm = TRUE),  # abundance as the number of birds counted, ('count_mean' is already standardized by # of surveys)
+    rich = sum(det, na.rm = TRUE),      # local species richness as the sum of detection across the community
+    # H = sum(p_lnp, na.rm = TRUE)*(-1),  # local species diversity (Shannon Index),
+    # evenness =  H/log(rich + 0.000000000001)
+    .by = c(site_code, location_type, survey_year, season)
+  ) %>% arrange(site_code, survey_year, season)
+# div.loc
+
+
+# Spatial Beta Diversity
+    # One way to measure beta diversity is by calculating each sites pairwise dissimilarity from all other sites in the same time period
+    # The mean of a site's dissimilarity values could be considered a measure of its 'uniqueness' across space
+    # i.e. spatial beta diversity
+    str(bird.counts.mean)
+    t <- 1
+    s <- 1
+    j <- 2
+    div.loc$beta_s_mean <- NA  # add a new column for spatial beta diversity (Bray-Curtis dissimilarity)
+    div.loc$beta_s_sd <- NA
+    
+    # for each year and season, 
+    # calculate each site's pairwise dissimilarity from all other sites, 
+    # calculate mean dissimilarity, 
+    # then add it to a beta diversity column
+    
+    for(t in 1:dim(bird.counts.mean)[3]){
+      for(s in 1:dim(bird.counts.mean)[[4]]){
+        spe <- bird.counts.mean[, which(dimnames(bird.counts.mean)[[2]] %in% spp.known),t,s]   # only use the identified species
+        beta.s <- vegdist(spe, method = "bray", binary = FALSE, na.rm = TRUE) %>% as.matrix() # Bray-Curtis Dissimilarity
+        beta.mean <- numeric()
+        beta.sd <- numeric()
+        for(j in 1:ncol(beta.s)){
+          beta.s[j,j] <- NA
+          beta.mean[j] <- mean(beta.s[,j], na.rm = TRUE)
+          beta.sd[j] <- mean(beta.s[,j], na.rm = TRUE)
+        }
+        beta.mean[is.nan(beta.mean) == TRUE] <- NA # fix the columns that were all NA, which 'mean()' turned into NaN
+        beta.mean <- beta.mean[!is.na(beta.mean) == TRUE] # drop the NAs
+        beta.sd[is.nan(beta.sd) == TRUE] <- NA
+        beta.sd <- beta.sd[!is.na(beta.sd) == TRUE]
+        
+        if(length(beta.mean) > 0){
+          div.loc[which(div.loc$survey_year == unique(div.loc$survey_year)[t] & 
+                        div.loc$season == unique(div.loc$season)[s]),]$beta_s_mean <- beta.mean
+        }else{}
+        if(length(beta.sd) > 0){
+          div.loc[which(div.loc$survey_year == unique(div.loc$survey_year)[t] & 
+                        div.loc$season == unique(div.loc$season)[s]),]$beta_s_sd <- beta.sd
+        }else{}
+        
+      }
+    }
+    
+    
+# Temporal Beta Diversity
+    # Dissimilarity metrics (e.g. Bray-Curtis) are not the most appropriate measure of temporal turnover (see Shimadzu et al. 2015)
+    # because they do not capture the unidirectionality of change over time
+    # but they could be use full to capture how 'temporally unique' each site's community is in any given year
+    div.loc$beta_t_mean <- NA  # the new column for spatial beta diversity (Bray-Curtis dissimilarity)
+    div.loc$beta_t_sd <- NA
+    
+    for(j in 1:dim(bird.counts.mean)[1]){
+      for(s in 1:dim(bird.counts.mean)[4]){
+        spe <- bird.counts.mean[j, which(dimnames(bird.counts.mean)[[2]] %in% spp.known),,s]  # only use the identified species
+        beta.t <- vegdist(t(spe), method = "bray", binary = FALSE, na.rm = TRUE) %>% as.matrix() # Bray-Curtis Dissimilarity
+        beta.mean <- numeric()
+        beta.sd <- numeric()
+        for(t in 1:ncol(beta.t)){
+          beta.t[t,t] <- NA   # set the diagonals to NA
+          beta.mean[t] <- mean(beta.t[,t], na.rm = TRUE)
+          beta.sd[t] <- sd(beta.t[,t], na.rm = TRUE)
+        }
+        beta.mean[is.nan(beta.mean) == TRUE] <- NA # fix the columns that were all NA, which 'mean()' turned into NaN
+        beta.mean <- beta.mean[!is.na(beta.mean) == TRUE] # drop the NAs
+        beta.sd[is.nan(beta.sd) == TRUE] <- NA
+        beta.sd <- beta.sd[!is.na(beta.sd) == TRUE]
+        
+        if(length(beta.mean) > 0){
+          div.loc[which(div.loc$site_code == unique(div.loc$site_code)[j] & 
+                        div.loc$season == unique(div.loc$season)[s]),]$beta_t_mean <- beta.mean
+        }else{}
+        if(length(beta.sd) > 0){
+          div.loc[which(div.loc$site_code == unique(div.loc$site_code)[j] & 
+                        div.loc$season == unique(div.loc$season)[s]),]$beta_t_sd <- beta.sd
+        }else{}
+      }
+    }
+# div.loc
+    
+# obs %>% 
+#   arrange(site_code, survey_year, season) %>% 
+#   mutate(abundance_rel = count_mean/abundance_tot,
+#             p_lnp = abundance_rel*log(abundance_rel+0.000000000001)) 
+
+# With these data, there are 780 unique combos of site*year
+# length(unique(div.loc$site_code))*length(unique(div.loc$survey_year))
+# but only 761 site*year combos per season
+# nrow(div.loc)
+
+# Summarize regional community
+div.reg <- obs %>% #filter(code %in% c(spp.known)) %>%
+  # first, summarize presence of each species across sites
+  summarize(
+    count_mean = sum(count_mean), # mean number of each species detected per site, per season
+    n_site = length(code),         # number of sites surveyed per season and year
+    occ_site = sum(det),           # naive occupancy (number of sites occupied by each species)
+    occ_naive = sum(det)/n_site,   # naive occupancy probability (proportion of sites occupied by each species)
+    w = max(det),                  # regional detection (1 = species detected in the region)
+  .by = c(code, survey_year, season) # by site, year, and season
+  ) %>% arrange(survey_year, season) %>% 
+  # then, summarize across species
+  summarize(rich_reg = sum(w),           # regional species richness (number of species detected per season)
+            n_site_reg = first(n_site),
+            # rich_reg_occ = sum(occ_naive),  # regional occupancy (naive) ?????????
+            abund_reg_tot = sum(count_mean),
+  .by = c(survey_year, season)
+            ) %>% #%>% mutate(rich_w_std = rich_w*n_site_reg/max(n_site_reg))
+  mutate(
+      abund_reg_siteavg = abund_reg_tot/n_site_reg
+  ) %>%
+  arrange(survey_year, season)
+div.reg
+
+# div.loc %>% filter(site_code %in% c("M-9"))  # this site should have been excluded
+
+ggplot(div.reg, aes(x = survey_year, y = rich_reg, col = season)) +
+  geom_point()
+ggplot(div.reg, aes(x = survey_year, y = abund_reg_siteavg, col = season)) +
+  geom_point()
+# plot(div.reg$survey_year, div.reg$rich_reg)
+# plot(div.reg$survey_year, div.reg$rich_occ)
+# plot(div.reg$survey_year, div.reg$abund_reg_siteavg)
+# plot(data.env$survey_year, data.env$ppt_sum)
+# plot(data.env$survey_year, data.env$NDVI)
+# plot(data.env$survey_year, data.env$NDBI)
+```
+
+
+### Guild-level abundance and diversity
+Following Hordley et al. 2021, I have created two ecosystem function/service based guilds so far: seed dispersers (diet of at least 30% fruit and seeds) and insectivores (terrestrial invertivores)
+```{r, message = FALSE, echo = TRUE}
+# Guild-level Metrics 
+    # Seed dispersers (species with >30% fruit and seed in their diet)
+    g.seed <- obs %>% 
+      filter(is.na(SeedDisperser) == FALSE) %>%
+      summarize(
+        n_survey = max(n_survey, na.rm = TRUE),
+        abundance = sum(count_mean),       
+        rich = sum(det, na.rm = TRUE),
+        n_guild = length(SeedDisperser),
+      .by = c(site_code, location_type, survey_year, season, SeedDisperser)
+      )
+
+    
+  # Insectivores
+    # there are only terrestrial insectivores in this dataset, no aquatic-foraging invertivores
+    birdtraits.all %>% filter(common_name %in% c(obs %>% filter(Insectivore == 1) %>% pull(common_name) %>% unique()))
+
+    g.inv <- obs %>% filter(Insectivore == 1) %>%
+      summarize(
+        n_survey = max(n_survey, na.rm = TRUE), 
+        abundance = sum(count_mean), 
+        rich = sum(det, na.rm = TRUE), 
+        n_guild = length(Insectivore),
+      .by = c(site_code, location_type, survey_year, season)
+      )
+    
+  # Hummingbirds
+    g.pollen <- obs %>% filter(Pollinator == 1) %>%
+      summarize(
+        n_survey = max(n_survey, na.rm = TRUE), 
+        abundance = sum(count_mean), 
+        rich = sum(det, na.rm = TRUE), 
+        n_guild = length(Insectivore),
+      .by = c(site_code, location_type, survey_year, season)
+      )
+   
+```
+
+```{r merge community and guild datasets, message = FALSE}
+# Add the guild-level values as columns in the main dataset
+data.div <- div.loc %>% left_join(div.reg) %>%
+  # seed dispersers
+    left_join(g.seed %>% filter(SeedDisperser == "1") %>% 
+                rename(all_of(c(abund_SeedDisp = "abundance", rich_SeedDisp = "rich", n_guild_SeedDisp = "n_guild"))) %>% 
+                select(-c(SeedDisperser))
+              ) %>%
+  # Insectivores
+    left_join(g.inv %>% #
+                rename(all_of(c(abund_Invert = "abundance", rich_Invert = "rich", n_guild_Invert = "n_guild")))
+              ) %>%
+  # pollinators
+    left_join(g.pollen %>% #filter(hummingbird == "1") %>% 
+                rename(all_of(c(abund_pollen = "abundance", rich_pollen = "rich", n_guild_pollen = "n_guild")))
+              ) 
+data.div
+```
+
+
+
+# Assemble Data for Models
+```{r, include = FALSE}
+range(data.div$survey_year)
+# range(left_join(data.env, data.env.prevsummer) %>% pull(survey_year))
+range(data.env$survey_year)
+range(data.env.prevsummer$survey_year)
+```
+### Standardize environmental variables and merge observations with spatial data
+Step one is to merge the bird diversity dataset with the spatial data, while also splitting the data by seasons.
+
+```{r standardize variables, message = FALSE}
+data.env.model <- data.env %>%
+  # remove the survey years and sites being excluded from the analysis
+  filter(survey_year %in% unique(data.div$survey_year)) %>%
+  filter(site_code %in% unique(data.div$site_code)) %>%
+  filter(season %in% unique(data.div$season)) %>%
+  # group to standardize by season, since seasons will be modeled separately
+  # group_by(season) %>%  
+  mutate(
+    NDBI_std = (NDBI - mean(NDBI, na.rm = TRUE))/sd(NDBI, na.rm = TRUE),
+    NDBI_prevsum_std = (NDBI_prevsum - mean(NDBI_prevsum, na.rm = TRUE))/sd(NDBI_prevsum, na.rm = TRUE),
+    NISI_std = (NISI - mean(NISI, na.rm = TRUE))/sd(NISI, na.rm = TRUE),
+    NDISI_std = (NDISI - mean(NDISI, na.rm = TRUE))/sd(NDISI, na.rm = TRUE),
+    ENDISI_std = (ENDISI - mean(ENDISI, na.rm = TRUE))/sd(ENDISI, na.rm = TRUE),
+    NDVI_std = (NDVI - mean(NDVI, na.rm = TRUE))/sd(NDVI, na.rm = TRUE),
+    NDVI_prevsum_std = (NDVI_prevsum - mean(NDVI_prevsum, na.rm = TRUE))/sd(NDVI_prevsum, na.rm = TRUE),
+    SAVI_std = (SAVI - mean(SAVI, na.rm = TRUE))/sd(SAVI, na.rm = TRUE),
+    LST_std = (LST - mean(LST, na.rm = TRUE))/sd(LST, na.rm = TRUE),
+    LST_prevsum_std = (LST_prevsum - mean(LST_prevsum, na.rm = TRUE))/sd(LST_prevsum, na.rm = TRUE),
+    ppt_sum_std = (ppt_sum - mean(ppt_sum, na.rm = TRUE))/sd(ppt_sum, na.rm = TRUE),
+    ppt_sum_prevsum_std = (ppt_sum_prevsum - mean(ppt_sum_prevsum, na.rm = TRUE))/sd(ppt_sum_prevsum, na.rm = TRUE),
+    temp_max_std = (temp_max - mean(temp_max, na.rm = TRUE))/sd(temp_max, na.rm = TRUE),
+    temp_max_prevsum_std = (temp_max_prevsum - mean(temp_max_prevsum, na.rm = TRUE))/sd(temp_max_prevsum, na.rm = TRUE),
+    temp_min_std = (temp_min - mean(temp_min, na.rm = TRUE))/sd(temp_min, na.rm = TRUE),
+    temp_min_prevsum_std = (temp_min_prevsum - mean(temp_min_prevsum, na.rm = TRUE))/sd(temp_min_prevsum, na.rm = TRUE),
+    # NDBI_sd_std = (NDBI_sd - mean(NDBI_sd, na.rm = TRUE))/sd(NDBI_sd, na.rm = TRUE),
+    # NDVI_sd_std = (NDVI_sd - mean(NDVI_sd, na.rm = TRUE))/sd(NDVI_sd, na.rm = TRUE),
+    # LST_sd_std = (LST_sd - mean(LST_sd, na.rm = TRUE))/sd(LST_sd, na.rm = TRUE),
+    year_diff = survey_year - min(survey_year),
+    year_std = (year_diff - mean(year_diff, na.rm = TRUE))/sd(year_diff, na.rm = TRUE),
+    id = 1:length(site_code),
+  .by = c(season)) #%>% ungroup() 
+
+data.env.model  %>% arrange(id)
+```
+```{r}
+data.env.model  %>%
+  # group to standardize by season, since seasons will be modeled separately
+  # group_by(season) %>%  
+  reframe(
+    year_mean = mean(year_diff, na.rm = TRUE),
+    year_sd = sd(year_diff, na.rm = TRUE),
+    NDBI_mean = mean(NDBI, na.rm = TRUE),
+    NDBI_sd = sd(NDBI, na.rm = TRUE),
+    NDVI_mean = mean(NDVI, na.rm = TRUE),
+    NDVI_sd = sd(NDVI, na.rm = TRUE),
+    NDVI_prevsum_mean = mean(NDVI_prevsum, na.rm = TRUE),
+    NDVI_prevsum_sd = sd(NDVI_prevsum, na.rm = TRUE),
+    LST_mean = mean(LST, na.rm = TRUE),
+    LST_sd = sd(LST, na.rm = TRUE),
+    LST_prevsum_mean = mean(LST_prevsum, na.rm = TRUE),
+    LST_prevsum_sd = sd(LST_prevsum, na.rm = TRUE),
+    ppt_sum_mean = mean(ppt_sum, na.rm = TRUE),
+    ppt_sum_sd = sd(ppt_sum, na.rm = TRUE),
+    ppt_sum_prevsum_mean = mean(ppt_sum_prevsum, na.rm = TRUE),
+    ppt_sum_prevsum_sd = sd(ppt_sum_prevsum),
+    # id = 1:length(site_code),
+  .by = c(season)) #%>% ungroup()
+```
+
+
+```{r split seasonal data, message = FALSE, echo = TRUE}
+# Winter data
+data.win <- left_join(data.div, data.env.model) %>%  
+  drop_na(rich) %>% # drop the rows without bird data
+  ungroup() %>%
+  filter(season == "1_winter") 
+# data.win
+
+# Spring data
+data.spr <- left_join(data.div, data.env.model) %>%   
+  drop_na(rich) %>% # drop the rows without bird data
+  ungroup() %>%
+  # group_by(survey_year, season) %>%  # standardize by year and/or season?
+  filter(season == "2_spring") 
+# data.spr
+
+# add winter variables to the spring data
+  data.spr$NDBI_winter <- data.win$NDBI
+  data.spr$NDBI_winter_std <- data.win$NDBI_std
+  data.spr$NDVI_winter <- data.win$NDVI
+  data.spr$NDVI_winter_std <- data.win$NDVI_std
+  data.spr$LST_winter <- data.win$LST
+  data.spr$LST_winter_std <- data.win$LST_std
+  data.spr$temp_max_winter <- data.win$temp_max
+  data.spr$temp_max_winter_std <- data.win$temp_max_std
+  # data.spr$temp_min_winter <- data.win$temp_min
+  data.spr$temp_min_winter_std <- data.win$temp_min_std
+  data.spr$ppt_sum_winter <- data.win$ppt_sum
+  data.spr$ppt_sum_winter_std <- data.win$ppt_sum_std
+  
+  length(unique(
+    data.win$site_code
+  ))
+  range(data.win$survey_year)
+  range(data.spr$survey_year)
+
+  
+  # winter NDBI vs spring NDVI
+  ggplot(data.spr, aes(x = NDBI_winter, y = NDVI)) +
+  theme_classic() + 
+  geom_point() +
+  geom_smooth(method = "lm")+
+  # scale_color_brewer(palette = "Dark2") +
+  stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001, color = "black") +
+  labs(x = "Winter NDBI", y = "Spring NDVI")
+```
+# Export Prepped Data
+```{r export species list}
+# include some of the detection
+
+  birdtraits.obs <- obs %>% 
+  # calculate a global average abundance as the mean count per survey/site/year
+  group_by(code) %>% mutate(abundance_mean = mean(count_mean, na.rm = TRUE)) %>%
+  # group_by(code, season, survey_year) %>% mutate(abundance_tot = mean(count_mean, na.rm = TRUE)) %>%
+  # group_by(code) %>% mutate(abundance_mean = mean(abundance_tot, na.rm = TRUE)) %>%
+  group_by(code, season) %>% slice(1) %>% 
+  select(c(
+    common_name, sci_name, code, season, 
+    det_project, det_season, abundance_mean,
+    SeedDisperser, Insectivore, Pollinator)) %>% # everything should be the same here except det_season
+  pivot_wider(names_from = season, names_prefix = "det_", values_from = det_season) %>% 
+  select( # use select to reorder the columns
+    common_name,  #nombre_comun_MX,  
+    sci_name,code,
+    det_project, det_1_winter, det_2_spring, abundance_mean,
+    SeedDisperser, Insectivore, Pollinator, #woodpecker, Friend, Neighbor #det_season,
+  ) %>% arrange(common_name)
+birdtraits.obs$det_1_winter[which(is.na(birdtraits.obs$det_1_winter) == TRUE)] <- 0
+birdtraits.obs$det_2_spring[which(is.na(birdtraits.obs$det_2_spring) == TRUE)] <- 0
+birdtraits.obs %>% filter(Pollinator == 1)
+
+
+
+write.csv((birdtraits.obs %>% filter(code %in% spp.known)), "~/GitHub/caplter-birdcommunitydynamics/figures/supplementarytable_specieslist_known.csv", row.names = FALSE)
+
+write.csv((birdtraits.obs %>% filter(code %in% spp.unknown)), "~/GitHub/caplter-birdcommunitydynamics/figures/supplementarytable_specieslist_unknown.csv", row.names = FALSE)
+```
+
+```{r export model input data}
+rm(
+  bird.clim, bird.clim.annual, bird.ls, bird.ls.sd, bird.ls.annual, data.env.prevsummer, data.env.prevyear, obs.all,
+  bird.pts, birdtraits.all, 
+  var.cont, # g.waterfowl, g.wood, g.cluster, g.cultural, g.hab, # g.inv, g.seed, g.pollen,
+  beta.s, beta.t, beta.mean, beta.sd,
+  spe, time_lag_yr, crs.utm
+)
+save.image(file = "~/GitHub/caplter-birdcommunitydynamics/data/modelinputs_CAPbirds2024.RData")
+```
+
+
+# BONUS: Examine Data for Models
+### Distributions of response variables
+```{r}
+hist(data.win$abundance, breaks = 100)
+hist(data.win$rich, breaks = 30)
+# hist(data.win$beta_s_mean, breaks = 30)
+# hist(data.win$H, breaks = 20)
+# hist(data.win$evenness, breaks = 20)
+hist(data.spr$abundance, breaks = 100)
+hist(data.spr$rich, breaks = 30)
+# hist(data.spr$beta_s_mean, breaks = 30)
+
+
+# Waterfowl abundance
+
+# there are three survey periods in which abundance is quite high
+# data.win %>% filter(abundance > 100)
+# data.spr %>% filter(abundance > 100)
+
+# Seed disperser abundance
+hist(data.win$abund_SeedDisp)
+hist(data.win$rich_SeedDisp)
+hist(data.spr$abund_SeedDisp)
+hist(data.spr$rich_SeedDisp)
+
+
+# Pollinator abundance
+hist(data.win$abund_pollen, breaks = 8)
+hist(data.win$rich_pollen, breaks = 20)
+hist(data.spr$abund_pollen, breaks = 100)
+hist(data.spr$rich_pollen, breaks = 20)
+
+
+```  
+
+
+
+
+
+
+
+
+
+# BONUS: Model Parameterization
+First, we can verify that we will need mixed models:  
+1. Create a linear model without random effects  
+2. Calculate the residuals (i.e. unexplained variation) of this linear model  
+3. Plot the residuals against the levels of the potential random factors. If there's residual variance that could be explained by these factors, they should probably be included in a mixed effect model  
+
+```{r a priori model building - env}
+
+# Test models for environmental data 
+  # NDBI
+  glm.test <- glm(NDBI ~ year_diff, data = data.win)
+  glm.test.resid <- rstandard(glm.test)
+  plot(glm.test.resid ~ as.factor(data.win$site_code))
+  
+  glm.test <- glm(NDBI ~ year_diff, data = data.spr)
+  glm.test.resid <- rstandard(glm.test)
+  plot(glm.test.resid ~ as.factor(data.win$site_code))
+  # clearly, there's lots of variance in NDBI among sites, especially during spring
+  
+  # NDVI
+  glm.test <- glm(NDVI ~ year_diff, data = data.win)
+  glm.test.resid <- rstandard(glm.test)
+  plot(glm.test.resid ~ as.factor(data.win$site_code))
+  
+  glm.test <- glm(NDVI ~ year_diff, data = data.spr)
+  glm.test.resid <- rstandard(glm.test)
+  plot(glm.test.resid ~ as.factor(data.win$site_code))
+  # similar to NDBI, but inverse
+  
+  glm.test <- glm(LST ~ year_diff, data = data.win)
+  glm.test.resid <- rstandard(glm.test)
+  plot(glm.test.resid ~ as.factor(data.win$site_code))
+  
+  glm.test <- glm(LST ~ year_diff, data = data.spr)
+  glm.test.resid <- rstandard(glm.test)
+  plot(glm.test.resid ~ as.factor(data.win$site_code))
+  # some variance in land surface temperature among sites during spring for sure
+  
+  glm.test <- glm(ppt_sum ~ year_diff, data = data.win)
+  glm.test.resid <- rstandard(glm.test)
+  plot(glm.test.resid ~ as.factor(data.win$site_code))
+  
+  glm.test <- glm(ppt_sum ~ year_diff, data = data.spr)
+  glm.test.resid <- rstandard(glm.test)
+  plot(glm.test.resid ~ as.factor(data.win$site_code))
+  # not a lot of among-site variance in precipitation in spring, but there is some in winter
+  
+``` 
+```{r a priori model building - birds}
+
+# Test models for abundance and richness
+glm.test <- glm(abundance ~ NDBI_std, data = data.win, family = "nbinom2")
+glm.test.resid <- rstandard(glm.test)
+plot(glm.test.resid ~ as.factor(data.win$site_code))
+plot(glm.test.resid ~ as.factor(data.win$survey_year))
+
+
+glm.test <- glm(rich ~ NDBI_std, data = data.win, family = "poisson")
+glm.test.resid <- rstandard(glm.test)
+plot(glm.test.resid ~ as.factor(data.win$site_code))
+plot(glm.test.resid ~ as.factor(data.win$survey_year))
+
+# data.win %>% filter(abundance > 100)
+# obs %>% filter(abundance_tot > 100)
+# obs.all %>% filter(count_max > 10)
+```
+
+
+
+```{r species richness GLM, include = FALSE}
+glm(rich ~ survey_year + NDBI_std + LST_std + LST_prevsum_std, data = data.win, family = "poisson") %>% summary()
+```
+
+
+### Test Univariate Models
+We will likely need to fit different model types for abundance and richness. For richness, a Poisson model will probably work fine. For abundance, the response variable is continuous instead of integers (average abundances per season) and variances are not normally-distributed. We are likely dealing with overdispersion for the abundance data, so we need to find the most appropriate model first. Likely, this will be either a quasi-Poisson or negative binomial
+https://stackoverflow.com/questions/75799875/glmm-with-quasi-poisson-distribution  
+
+For checking over/underdispersion of GL(M)M's fit using 'glmmTMB', use 'check_overdispersion': 
+https://easystats.github.io/performance/reference/check_overdispersion.html  
+
+For models of class 'lmerMod' fit using lmer/glmer ('lmer4' package), we can test overdispersion using this function from Bolker et al. 2011  
+```{r overdispersion function for lme4, message = FALSE}
+
+# Function for testing model overdispersion (Bolker et al. 2011)
+    # Tests whether the ratio is signficantly > 1. If so,
+    # we need to model a different distribution where the variance increases more rapidly than the mean.
+    # https://rdrr.io/github/markushuff/PsychHelperFunctions/src/R/overdisp_fun.R
+    # http://bbolker.github.io/mixedmodels-misc/glmmFAQ.html
+    # Referenced in https://r.qcbs.ca/workshop07/book-en/poisson-glmm.html
+    overdisp_fun <- function(model) {
+      ## number of variance parameters in 
+      ##   an n-by-n variance-covariance matrix
+      vpars <- function(m) {
+        nrow(m)*(nrow(m)+1)/2
+      }
+      model.df <- sum(sapply(VarCorr(model),vpars))+length(fixef(model))
+      rdf <- nrow(model.frame(model))-model.df
+      rp <- residuals(model,type="pearson")
+      Pearson.chisq <- sum(rp^2)
+      prat <- Pearson.chisq/rdf
+      pval <- pchisq(Pearson.chisq, df=rdf, lower.tail=FALSE)
+      c(chisq=Pearson.chisq,ratio=prat,rdf=rdf,p=pval)
+    }
+```
+
+##### Test abundance model parameterizations 
+```{r, warning = FALSE, echo = TRUE, message = FALSE}
+  # a regular linear mixed model
+  m1 <- lmer(abundance ~  
+            LST_prevsum_std +
+            (1|site_code) 
+            , data = data.win
+            )
+  overdisp_fun(m1)   
+  # very, very overdispersed. Normal is not a great fit, unsurprisingly
+  # summary(m1)
+
+# let's try a log-normal model
+  m1 <- lmer(log(abundance+0.000000001) ~  
+            LST_prevsum_std +
+            (1|site_code) +  (1|survey_year)
+            , data = data.win
+            )
+  overdisp_fun(m1)
+  # actually not bad, but still not good. Plus it's more difficult to interpret transformed model coefficients
+  
+# let's try Poisson (or really, quasi-Poisson since it's continuous data)
+  # this is easier to do using the glmmTMB package 
+  # (Poisson models fit to non-integer data in 'lmer4' produce many warnings)
+  m1 <- glmmTMB(abundance ~  
+            LST_prevsum_std +
+            (1|site_code) +  (1|survey_year)
+            , data = data.win, 
+            family = poisson
+            )
+  check_overdispersion(m1)
+  # slightly better, but still overdispersed
+  # how about a negative binomial?
+  m1 <- glmmTMB(abundance ~  
+            LST_prevsum_std +
+            (1|site_code) +  (1|survey_year)
+            , data = data.win, 
+            family = nbinom1
+            )
+  check_overdispersion(m1)
+  # Closer! Let's try the quadratic parameterization of the negative binomial
+  m1 <- glmmTMB(abundance ~  
+            LST_prevsum_std +
+            (1|site_code) +  (1|survey_year)
+            , data = data.win, 
+            family = nbinom2
+            )
+  check_overdispersion(m1)
+  # Success! No significant overdispersion
+  
+  # One more option is to include an observation-level random effect;
+  # see https://r.qcbs.ca/workshop07/book-en/poisson-lognormal-glmm.html
+  range(data.win$id); nrow(data.win)
+  m1 <- glmmTMB(abundance ~  
+            LST_prevsum_std +
+            (1|id) + (1|site_code) +  (1|survey_year)
+            , data = data.win, 
+            family = poisson
+            )
+  check_overdispersion(m1)
+  # now that's looking underdispersed. Let's stick with the negative binomial
+
+```
+```{r}
+m1 <-  lmer(abundance ~  
+            LST_prevsum_std +
+            (1|site_code) + (1|survey_year)
+            , data = data.win
+            )
+  overdisp_fun(m1)  
+
+m1 <- glmmTMB(beta_s_mean ~  
+            LST_prevsum_std +
+            (1|site_code) +  (1|survey_year)
+            , data = data.win, 
+            family = poisson
+            )
+  check_overdispersion(m1)
+  
+
+```
+
+
+##### Examine univariate models of total community abundance
+Summary results of univariate models for abundance (with site as a random effect, winter data):  
+
+```{r table1, echo=FALSE, message=FALSE, warnings=FALSE, results='asis'}
+# https://stackoverflow.com/questions/19997242/simple-manual-rmarkdown-tables-that-look-good-in-html-pdf-and-docx
+tabl <- "
+| Covariate         | AIC           |  p-value    |  Direction (***: p < 0.05) |
+|:------------------|:--------------|:------------|:---------------------------|
+| Year              | 5249.764      | 0.000       | Negative***               |
+| NDBI              | 5381.824      | 0.182       | Negative               |
+| NDISI             | 5383.433      | 0.675       | Negative               |
+| ENDISI            | 5382.617      | 0.318       | Negative                  |
+| NISI              | 5382.945      | 0.416       | Negative                  |
+| NDVI              | 5381.963      | 0.201       | Positive                  |
+| NDVI_prevsum      | 5331.687      | 0.000       | Positive***               |
+| LST               | 5338.193      | 0.000       | Negative***                  |
+| LST_prevsum       | 5251.067      | 0.000       | Negative***               |
+| ppt_sum           | 5383.333      | 0.598       | Negative                  |
+| ppt_sum_prevsum   | 5377.619      | 0.014       | Negative***                  |
+"
+cat(tabl) # output the table in a format good for HTML/PDF/docx conversion
+```
+
+Effect of 'year' as a continuous variable (with site as a random effect): significantly negative (p < 2e-16; AIC 4966.913)  
+
+Detailed results of the top univariate abundance model:
+```{r total community abundance GLMM, warning = FALSE}
+# now try that with different covariates one at a time
+# some of these may be a bit overdispersed
+m1 <- glmmTMB(abundance ~ 
+          year_std +   # year as a continuous fixed effect
+          # NDBI_std +
+          # NDISI_std +
+          # ENDISI_std +
+          # NISI_std +
+          # NDVI_std +   # this is moderately collinear with other variables
+          # NDVI_prevsum_std +
+          # LST_std +
+          # LST_prevsum_std +
+          # ppt_sum_std +
+          # ppt_sum_prevsum_std +
+          # temp_max_std +
+          # temp_max_prevsum_std +
+          # temp_min_std +
+          # temp_min_prevsum_std +
+          (1|site_code) #+ (1|survey_year)  #+ (1|id) #+ (1|season) #+ (1|loc_type)
+          , data = data.win, 
+          family = nbinom2
+          )
+# check_overdispersion(m1)
+r.squaredGLMM(m1)
+summary(m1)
+AIC(m1)
+
+# as a fixed effect, year explains ~9.5% of variation in abundance
+```
+
+
+
+##### Examine univariate models of species richness
+
+
+Summary results of univariate models for richness (with only site and year as random effects, winter data):
+```{r table2, echo=FALSE, message=FALSE, warnings=FALSE, results='asis'}
+tabl <- "
+| Covariate         | AIC           |  p-value    |  Direction (***: p < 0.05) |
+|:------------------|:--------------|:------------|:---------------------------|
+| Year              | 3964.27      | 0.000       | Negative***               |
+| NDBI              | 4061.09      | 0.007       | Negative***               |
+| NDISI             | 4065.969      | 0.006       | Negative***               |
+| ENDISI            | 3958.881      | 0.142       | Negative                  |
+| NISI              | 3851.88       | 0.609       | Negative                  |
+| LST               | 3851.857      | 0.594       | Positive                  |
+| LST_prevsum       | 3846.065      | 0.013       | Negative***               |
+| ppt_sum           | 3851.516      | 0.433       | Negative                  |
+| ppt_sum_prevsum   | 3849.635      | 0.116       | Positive                  |
+| NDVI              | 3851.278      | 0.352       | Positive                  |
+| NDVI_prevsum      | 3843.170      | 0.002       | Positive***               |
+"
+cat(tabl) # output the table in a format good for HTML/PDF/docx conversion
+```
+
+
+
+
+
+### Test Global Models
+Run a series of global models based on the winter data, checking for multicollinearity as we go. NDVI variables across the seasons have high bivariate correlations with a number of variables and may need to be included. Let's keep them in for now and exclude later it if we find multicollinearity issues. VIF < 5 indicates a low correlation of that predictor with other predictors (5-10 is moderate, >10 is high). Others (e.g. Zuur et al. 2010) suggest lower values, e.g. VIF < 3 is 'low' multicollinearity.
+https://rdrr.io/cran/performance/man/check_collinearity.html
+
+The air temperature variables (temp_max, temp_min) are also redundant with one another and are moderately correlated across different seasons, so let's just stick with temp_max
+```{r test total community abundance GLMM global model, warning = FALSE}
+# cor(data.win$temp_max, data.win$temp_min)
+# cor(data.win$temp_max_prevsum, data.win$temp_min_prevsum)
+
+# now try that with different covariates
+m1 <- glmmTMB(abundance ~ 
+          # time
+            year_std +   # year as a continuous variable
+          # current env. conditions
+            NDBI_std +
+            # NDISI_std +
+            # ENDISI_std +
+            # NISI_std +
+            NDVI_std +
+            LST_std +
+            ppt_sum_std +
+          # interactions between current env. conditions
+            NDBI_std*NDVI_std +
+            NDBI_std*LST_std +
+            NDBI_std*ppt_sum_std +
+            # NDISI_std*NDVI_std +
+            # NDISI_std*LST_std +
+            # NDISI_std*ppt_sum_std +
+            # ENDISI_std*NDVI_std +
+            # ENDISI_std*LST_std +
+            # ENDISI_std*ppt_sum_std +
+            # NISI_std*NDVI_std +
+            # NISI_std*LST_std +
+            # NISI_std*ppt_sum_std +
+          # recent env conditions
+            # NDBI_prevsum +
+            NDVI_prevsum_std +
+            LST_prevsum_std +
+            ppt_sum_prevsum_std +
+          # some potential interaction effects
+            # year_std * NDBI_std +
+            # year_std * LST_std +
+            # year_std * LST_prevsum_std +
+            # year_std * ppt_sum_std +
+            # year_std * ppt_sum_prevsum_std +
+            # year_std * NDVI_prevsum_std +
+          # (1 |site_code) 
+          (1 + year_std|site_code) #+  (1|survey_year) #+ (1|id)
+          , data = data.win, 
+          family = nbinom2
+          )
+# check_overdispersion(m1)
+check_collinearity(m1)
+# r.squaredGLMM(m1)
+summary(m1)
+AIC(m1)
+
+# LST (LST) generally gives a better model fit than air temperature (temp_max or temp_min)
+```
+
+
+
+When we run the global models for *winter* abundance with different urbanization metrics, these are the results for those parameters (NISI model excludes NDVI):  
+```{r table3 - winter, echo=FALSE, message=FALSE, warnings=FALSE, results='asis'}
+tabl <- "
+| Covariate         | AIC           |  p-value    |  Direction (***: p < 0.05) |
+|:------------------|:--------------|:------------|:---------------------------|
+| NDBI              | 5143.699      | 0.000       | Negative***               |
+| NDISI             | 5148.933      | 0.000       | Positive***               |
+| ENDISI            | 5149.714      | 0.822       | Positive                  |
+| NISI              | 5154.132      | 0.926       | Negative                  |
+
+"
+cat(tabl) # output the table in a format good for HTML/PDF/docx conversion
+```
+
+Model AIC values (starting with global model and subtracting one at a time):  
+5066.875    full model with NDVI
+5080.127    full model without NDVI (which had moderately high collinearity); marginal R^2 = 0.220
+5076.302    without temp_max_t0
+5074.474    without ther
+          (1 + year_std|site_code)m
+5073.063    without temp_max
+5071.492    without ppt_sum_t0
+5070.291    without temp_min -> temp_min_t0 has now reached p < 0.05
+5069.376    without NDBI
+5068.663    without ppt_sum  -> every remaining variable is now p < 0.05 removing variables reduces model quality; marginal R^2 = 0.236
+5072.822    without temp_min_t0 -> AIC increase
+=
+
+Repeating the process of running global models for *spring* abundance with different urbanization metrics, these are the results for those parameters (NISI model excludes NDVI): 
+```{r table3 - spring, echo=FALSE, message=FALSE, warnings=FALSE, results='asis'}
+tabl <- "
+| Covariate         | AIC           |  p-value    |  Direction (***: p < 0.05) |
+|:------------------|:--------------|:------------|:---------------------------|
+| NDBI              | 4997.442      | 0.000       | Negative***               |
+| NDISI             | 5027.579      | 0.500       | Positive                  |
+| ENDISI            | 5019.766      | 0.103       | Negative                  |
+| NISI              | 5009.511      | 0.910       | Positive                  |
+
+"
+cat(tabl) # output the table in a format good for HTML/PDF/docx conversion
+```
+
+
+
+```{r}
+ggplot(data = data.win, aes(x = NDBI, y = rich)) + geom_point()
+```
+
+```{r species richness GLMM global model - winter}
+m1 <- glmmTMB(rich ~
+          # time
+            year_std +   # year as a continuous variable
+          # current env. conditions
+            NDBI_std +
+            # NDISI_std +
+            # ENDISI_std +
+            # NISI_std +
+            NDVI_std +
+            LST_std +
+            ppt_sum_std +
+          # interactions between current env. conditions
+            NDBI_std*NDVI_std +
+            NDBI_std*LST_std +
+            NDBI_std*ppt_sum_std +
+            # NDISI_std*NDVI_std +
+            # NDISI_std*LST_std +
+            # NDISI_std*ppt_sum_std +
+            # ENDISI_std*NDVI_std +
+            # ENDISI_std*LST_std +
+            # ENDISI_std*ppt_sum_std +
+            # NISI_std*NDVI_std +
+            # NISI_std*LST_std +
+            # NISI_std*ppt_sum_std +
+          # recent env conditions
+            NDVI_prevsum_std +
+            LST_prevsum_std +
+            ppt_sum_prevsum_std +
+          # some potential interaction effects
+            # year_std * NDBI_std +
+            # year_std * LST_std +
+            # year_std * LST_prevsum_std +
+            # year_std * ppt_sum_std +
+            # year_std * ppt_sum_prevsum_std +
+            # year_std * NDVI_prevsum_std +
+          # (1 |site_code) 
+          (1 + year_std|site_code) #+  (1|survey_year) #+ (1|id)
+          , data = data.spr, 
+          family = poisson    # 'poisson' for richness
+          )
+
+# check_overdispersion(m1)
+# check_collinearity(m1)
+# round(confint(m1), 2)
+# ranef(m1)
+r.squaredGLMM(m1)
+summary(m1)
+AIC(m1)
+
+```
+Model AIC values (starting with global model and subtracting one at a time):  
+3920.071    full model with NDVI; marginal R^2 = 0.152    -> BUT, VIF for NDVI is > 5 and LST > 3
+3924.41     full model without NDVI; marginal R^2 = 0.091
+3922.453    without LST  -> at this point, VIF < 3 for all variables *****
+3921.818    without summer air temp -> NDBI now p < 0.1
+3921.53     without summer precip
+3921.247    without air temp
+3919.981    without precip -> NDBI now p > 0.1 again; lowest AIC; marginal R^2 = 0.076
+3920.308    without NDBI -> increase AIC
+3920.829    without temp_min_t0
+
+When we run the global models for species richness with different urbanization metrics, these are the results for those parameters (NISI model excludes NDVI):  
+```{r table4, echo=FALSE, message=FALSE, warnings=FALSE, results='asis'}
+tabl <- "
+| Covariate         | AIC           |  p-value    |  Direction (***: p < 0.05) |
+|:------------------|:--------------|:------------|:---------------------------|
+| NDBI              | 3838.865      | 0.001       | Negative***               |
+| NDISI             | 3842.396      | 0.006       | Positive***               |
+| ENDISI            | 3848.775      | 0.405       | Negative                  |
+| NISI              | 3847.422      | 0.718       | Positive                  |
+
+"
+cat(tabl) # output the table in a format good for HTML/PDF/docx conversion
+```
+3.95 LST vs. 4.25 temp vs. 4.30 both
+```{r total community abundance GLMM global model - spring, warning = FALSE}
+# now try that with different covariates
+m1 <- glmmTMB(abundance ~ #   abund_pollen  abund_woodpeck   abund_Metropolitan
+          year_std +   # year as a continuous variable
+          NDBI_std +
+          # NDISI_std +
+          # ENDISI_std +
+          # NISI_std +
+          # NDVI_std +      # generally high VIF across different model combinations
+          LST_std +
+          ppt_sum_std +
+          NDVI_prevsum_std +
+          LST_prevsum_std +
+          ppt_sum_prevsum_std +
+          # NDVI_winter_std +
+          # LST_winter_std +
+          # ppt_sum_winter_std +
+          # some potential interaction effects
+            # year_std * NDBI_std +
+            # year_std * LST_std +
+            # year_std * LST_prevsum_std +
+            # year_std * ppt_sum_std +
+            # year_std * ppt_sum_prevsum_std +
+            # year_std * NDVI_prevsum_std +
+          # (1 |site_code) 
+          (1 + year_std|site_code) #+  (1|survey_year) #+ (1|id)
+          , data = data.spr,   # (data.spr %>% filter(abundance < 100))
+          family = nbinom2
+          )
+
+# check_overdispersion(m1)
+# check_collinearity(m1)
+# round(confint(m1), 2)
+# ranef(m1)
+r.squaredGLMM(m1)
+summary(m1)
+AIC(m1)
+```
+
+Model AIC values (starting with global model and subtracting one at a time):  
+4858.858    Full model with NDVI; marginal R^2 = 0.245
+4864.929    Full model minus NDVI; marginal R^2 = 0.184 -> VIF for all variables is < 3 now
+
+4871.571    Model including the prior winter, but not monsoon summer -> VIF for all variables < 5
+4865.755    Model including the prior monsoon summer, but not winter -> VIF for NDBI and NDVI higher but still < 5
+
+```{r species richness GLMM global model - spring}
+m1 <- glmmTMB(rich ~ 
+          year_std +   # year as a continuous variable
+          NDBI_std +
+          # NDISI_std +
+          # ENDISI_std +
+          # NISI_std +
+          # NDVI_std +      # generally high VIF across different model combinations
+          LST_std +
+          ppt_sum_std +
+          NDVI_prevsum_std +
+          LST_prevsum_std +
+          ppt_sum_prevsum_std +
+          # NDVI_winter_std +
+          # LST_winter_std +
+          # ppt_sum_winter_std +
+          # some potential interaction effects
+            # year_std * NDBI_std +
+            # year_std * LST_std +
+            # year_std * LST_prevsum_std +
+            # year_std * ppt_sum_std +
+            # year_std * ppt_sum_prevsum_std +
+            # year_std * NDVI_prevsum_std +
+          # (1 |site_code) 
+          (1 + year_std|site_code) #+  (1|survey_year) #+ (1|id)
+          , data = data.spr, 
+          family = poisson    # 'poisson' for richness
+          )
+
+# check_overdispersion(m1)
+# check_collinearity(m1)
+# round(confint(m1), 2)
+# ranef(m1)
+r.squaredGLMM(m1)
+summary(m1)
+AIC(m1)
+```
+Model AIC values (starting with global model and subtracting one at a time):  
+3948.952    Full model with NDVI; marginal R^2 = 0.115 -> VIF for NDVI > 5
+3947.683    Full model minus NDVI; marginal R^2 = 0.109 -> this model is now fine (VIF < 3)
+3945.758    minus winter air temp
+3943.857    minus precip
+3942.350    minus summer LST   -> summer NDVI now p < 0.1
+3940.940    minus LST
+3939.507    minus summer precip
+3938.191    minus winter LST
+3937.164    minus winter precip
+3936.510    minus NDBI        -> summer NDVI now p < 0.05
+3935.861    minus summer air temp -> all variables now p < 0.10; marginal R^2 = 0.085 -> only summer NDVI, winter NDVI, and air temp
+3937.049    minus winter NDVI -> increased AIC
+
+### Test Global Models for Guild Abundance/Richness
+```{r seed disperser abundance GLMM global model - winter, warning = FALSE}
+# now try that with different covariates
+m1 <- glmmTMB(abund_waterfowl ~ 
+          NDBI_std +
+          # NDISI_std +
+          # ENDISI_std +
+          # NISI_std +
+          LST_std +
+          LST_prevsum_std +
+          # temp_max_std +
+          # temp_max_prevsum_std +
+          # temp_min_std +
+          # temp_min_prevsum_std +
+          ppt_sum_std +
+          ppt_sum_prevsum_std +
+          # NDVI_std +      # generally high VIF across different model combinations
+          NDVI_prevsum_std +
+          # NDVI_winter_std +
+          # LST_winter_std +
+          # temp_max_winter_std +
+          # ppt_sum_winter_std +
+          # temp_min_winter_std +
+          year_std +   # year as a continuous variable
+          (1|site_code) #+  (1|survey_year) #+ (1|id)
+          , data = data.win,   # (data.spr %>% filter(abundance < 100))
+          family = nbinom2
+          )
+
+# check_overdispersion(m1)
+# check_collinearity(m1)
+# round(confint(m1), 3)
+# ranef(m1)
+r.squaredGLMM(m1)
+summary(m1)
+AIC(m1)
+```
