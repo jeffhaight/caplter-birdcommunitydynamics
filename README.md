@@ -35,9 +35,7 @@ This folder contains all RMarkdown (.rmd) code files used for synthesizing data 
 ---
 <div align="center"> <h3>data</h3> </div>
 This contains all the data files used for conducting the analyses and producing the `figures`, :  
-**`sites`**  
-**`spp`**   
-**`model_summaries`** 
+
 | File  | Description  |
 |---|---|
 |**./data/arizonapalettes.RData**   			|Contains R objects containing manually constructed color palettes for use in figures|
@@ -47,8 +45,8 @@ This contains all the data files used for conducting the analyses and producing 
 |**./data/bird_survey_locations_51sites.shp**   	|ESRI Shapefile depicting the point locations the 51 bird censusing sites selected for analysis|
 |**./data/bird_survey_locations_51sites_1000mbuffer.shp**|ESRI Shapefile depicting a 1000-m radius buffer around the 51 bird censusing sites selected for analysis|
 |**./data/birdtraits_corebirds2024.csv**  		|Contains synthesized species trait data for all observed bird species|
-|**./data/envsummaries_corebirds_combined.csv		|Long-term environmental data for bird censusing sites (Haight et al. 2024)|
-|**./data/modelinputs_CAPbirds2024.RData		|R Workspace containing all processed and combined R objects needed to conduct analyses|
+|**./data/envsummaries_corebirds_combined.csv**		|Long-term environmental data for bird censusing sites (Haight et al. 2024)|
+|**./data/modelinputs_CAPbirds2024.RData		|R Workspace containing all processed and combined R objects needed to conduct analyses**|
 
 ---
 <div align="center"> <h3>figures</h3> </div>
