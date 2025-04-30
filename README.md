@@ -3,7 +3,7 @@
 # caplter-birdcommunitydynamics
 
 # A repository for:
-Haight, Jeffrey D.; de Albuquerque, Fabio S.; Bateman, Heather L.; Frazier, Amy E.; Larson, Kelli L.. Urbanization and climate drive long-term bird community trends across a desert city ecosystem. Ecological Applications
+Haight, Jeffrey D.; de Albuquerque, Fabio S.; Bateman, Heather L.; Frazier, Amy E.; Larson, Kelli L.. Urbanization and climate drive long-term bird community trends across a desert city ecosystem. _Ecological Applications_
 
 This repository contains code and data used for preparing, analyzing, and visualizing long-term avian point-count data ([Lerman et al. 2023](https://doi.org/10.6073/PASTA/4777D7F0A899F506D6D4F9B5D535BA09)) and relationships between bird occurrence and seasonal environmental conditions at 51 sites across central Arizona, USA ([Haight et al. 2024](https://doi.org/10.6073/PASTA/9D44CD85F881586D6D06E7A7293E833C)). This project is supported by the Central Arizona-Phoenix Long-term Ecological Research (CAP LTER) program
 
