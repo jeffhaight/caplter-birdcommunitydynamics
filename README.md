@@ -23,9 +23,9 @@ This folder contains all RMarkdown (.rmd) code files used for synthesizing data 
 
 | File  | Description  |
 |---|---|
-|**./code/1_1_DataCleaning_SpeciesObs_caplter-birdcommunitydynamic.Rmd**   	|For cleaning and organizing raw bird observation datasets sourced from the CAP LTER database|
-|**./code/1_2_DataCleaning_SpeciesTraits_caplter-birdcommunitydynamics.Rmd** 	|For cleaning and organizing trait data from the EltonTraits and AVONET databases| 
-|**./code/1_3_ModelSetup_caplter-birdcommunitydynamics.Rmd**   			|For further reformatting of data for analysis, including |
+|**./code/1_1_DataCleaning_SpeciesObs_caplter-birdcommunitydynamic.Rmd**   	|For importing and processing raw bird observation datasets sourced from the CAP LTER database|
+|**./code/1_2_DataCleaning_SpeciesTraits_caplter-birdcommunitydynamics.Rmd** 	|For importing and processing trait data from the EltonTraits and AVONET databases| 
+|**./code/1_3_ModelSetup_caplter-birdcommunitydynamics.Rmd**   			|For organizing datasets in preparation for statistical modeling|
 |**./code/2_1_EnvTrends_caplter-birdcommunitydynamics.Rmd**   			|For testing and visualizing spatial-temporal trends in, and relationships among, environmental conditions|
 |**./code/2_2_AvianCommunityTrends_caplter-birdcommunitydynamics.Rmd**   	|For testing and visualizing spatial-temporal patterns overall bird community characteristics (abundance and species richness) and functional group abundances|
 |**./code/2_3_CommunityGLMM_caplter-birdcommunitydynamics**  			|For fitting generalized linear mixed models examining environmental drivers of overall bird community characteristics (abundance and species richness) and functional group abundances|
@@ -34,7 +34,7 @@ This folder contains all RMarkdown (.rmd) code files used for synthesizing data 
 
 ---
 <div align="center"> <h3>data</h3> </div>
-This contains all the data files used for conducting the analyses and producing the `figures`, :  
+This contains all the data files used for conducting the analyses and producing the `figures`.  
 
 | File  | Description  |
 |---|---|
