@@ -1,12 +1,13 @@
 ---
 title: "CAP Bird Community Dynamics - Generalized Linear Mixed Models"
-author: "Jeffrey Haight"
+author: "Jeffrey Haight et al."
 date: "`r Sys.Date()`"
 output:
   word_document: default
   html_document: default
 ---
 
+Code for fitting generalized linear mixed models examining environmental drivers of overall bird community characteristics (abundance and species richness) and functional group abundances
 ```{r setup, set.seed(54321), include=FALSE}
 knitr::opts_chunk$set(
   echo = FALSE,
@@ -46,10 +47,10 @@ gc()
 
 # Import Data
 ```{r, include = FALSE}
-list.files("./data")
+list.files("~/GitHub/caplter-birdcommunitydynamics/data")
 
 # This contains data assembled by the '2_1_StatisticalModelingSetup_CAPbirds' file
-load("./data/modelinputs_CAPbirds2024.RData")
+load("~/GitHub/caplter-birdcommunitydynamics/data/modelinputs_CAPbirds2024.RData")
 
 
 data.win$site_code <- as.factor(data.spr$site_code)
@@ -553,7 +554,7 @@ m.coef %>% arrange(desc(upper95))  # highest range of fixed effects at about -0.
 #
 m.coef$CI_95 <- paste(round(m.coef$lower95, 3), round(m.coef$upper95, 3), sep = ", ")
 m.coef <- m.coef %>% arrange(response_ord, desc(season))
-write.csv(m.coef, "./data/modeloutputs_fixedeffectestimates.csv", row.names = FALSE)
+write.csv(m.coef, "~/GitHub/caplter-birdcommunitydynamics/data/modeloutputs_fixedeffectestimates.csv", row.names = FALSE)
 ```
 ```{r model variances, warning = FALSE}
 m.r2 <- cbind(
@@ -634,15 +635,15 @@ ggplot(aes(x = param_ord_rev, y = estimate, color = response_ord_rev, fill = res
   )
 plot.spring
 
-list.files("./figures/effects_env")
-ggsave("./figures/effects_env/fig1_modeleffects_abundance_1winter.png",
+list.files("~/GitHub/caplter-birdcommunitydynamics/figures/effects_env")
+ggsave("~/GitHub/caplter-birdcommunitydynamics/figures/effects_env/fig1_modeleffects_abundance_1winter.png",
          plot.winter,
          width = 4,
          height = 4,
          units = "in",
          dpi = 300)
 
-ggsave("./figures/effects_env/fig1_modeleffects_abundance_2spring.png",
+ggsave("~/GitHub/caplter-birdcommunitydynamics/figures/effects_env/fig1_modeleffects_abundance_2spring.png",
        plot.spring,
        width = 5,
        height = 4,
@@ -678,7 +679,7 @@ ggplot(aes(x = param_ord_rev, y = estimate, color = response_ord_rev, fill = res
   ) + facet_grid(cols = vars(season))
 plot.both
 
-ggsave("./figures/effects_env/fig1_modeleffects_abundance_bothseasons.png",
+ggsave("~/GitHub/caplter-birdcommunitydynamics/figures/effects_env/fig1_modeleffects_abundance_bothseasons.png",
        plot.both,
        width = 6,
        height = 3.75,
@@ -711,7 +712,7 @@ ggplot(aes(x = param_ord_rev, y = estimate)) +
 plot.both
 
 
-ggsave("./figures/effects_env/fig1_modeleffects_richness_bothseasons.png",
+ggsave("~/GitHub/caplter-birdcommunitydynamics/figures/effects_env/fig1_modeleffects_richness_bothseasons.png",
        plot.both,
        width = 6,
        height = 3.75,
@@ -760,7 +761,7 @@ ggplot(aes(x = param_ord_rev, y = estimate, color = response_ord_rev, fill = res
 plot.both
 
 
-ggsave("./figures/effects_env/fig1_modeleffects_allresponses_bothseasons_wide.png",
+ggsave("~/GitHub/caplter-birdcommunitydynamics/figures/effects_env/fig1_modeleffects_allresponses_bothseasons_wide.png",
        plot.both,
        width = 12,
        height = 6,
@@ -810,7 +811,7 @@ ggplot(aes(x = param_ord_rev, y = estimate, color = response_ord_rev, fill = res
 plot.both
 
 
-ggsave("./figures/effects_env/fig1_modeleffects_allresponses_bothseasons_long.png",
+ggsave("~/GitHub/caplter-birdcommunitydynamics/figures/effects_env/fig1_modeleffects_allresponses_bothseasons_long.png",
        plot.both,
        width = 6.5,
        height = 5.5,
@@ -819,6 +820,3 @@ ggsave("./figures/effects_env/fig1_modeleffects_allresponses_bothseasons_long.pn
 
 ```
 
-
-# BONUS
-\

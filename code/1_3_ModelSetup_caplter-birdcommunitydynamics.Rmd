@@ -1,12 +1,13 @@
 ---
 title: "CAP Bird Community Dynamics - Model Setup & Testing"
-author: "Jeffrey Haight"
+author: "Jeffrey Haight et al."
 date: "`r Sys.Date()`"
 output:
   word_document: default
   html_document: default
 ---
 
+Code for organizing datasets in preparation for statistical modeling
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
   echo = FALSE,

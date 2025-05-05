@@ -1,11 +1,13 @@
 ---
-title: "CAP Bird Community Dynamics - Visualizing Landscape & Biodiversity Dynamics"
-author: "Jeffrey Haight"
+title: "CAP Bird Community Dynamics - Testing and Visualizing Environmental Patterns and Trends"
+author: "Jeffrey Haight et al."
 date: "`r Sys.Date()`"
 output:
   word_document: default
   html_document: default
 ---
+
+Code for testing and visualizing spatial-temporal trends in, and relationships among, environmental conditions
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(

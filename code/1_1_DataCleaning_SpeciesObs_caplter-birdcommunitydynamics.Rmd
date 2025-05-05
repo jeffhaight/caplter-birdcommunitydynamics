@@ -1,9 +1,14 @@
 ---
 title: "CAP Bird Community Dynamics - Bird Observation Data Prep"
-author: "Jeffrey Haight"
+author: "Jeffrey Haight et al."
 date: "`r Sys.Date()`"
 output: html_document
 ---
+
+Code for cleaning and organizing raw bird observation datasets sourced from the CAP LTER database
+
+Data Source:
+Lerman, S. B., Warren, P. S., Bateman, H., Katti, M., & Shochat, E. (2023). Point-count bird censusing: Long-term monitoring of bird abundance and diversity in central Arizona-Phoenix, ongoing since 2000 [Dataset]. Environmental Data Initiative. https://doi.org/10.6073/PASTA/4777D7F0A899F506D6D4F9B5D535BA09
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -19,8 +24,7 @@ library(sf)
 # library(terra)
 ```
 
-Data Source
-Lerman, S. B., Warren, P. S., Bateman, H., Katti, M., & Shochat, E. (2023). Point-count bird censusing: Long-term monitoring of bird abundance and diversity in central Arizona-Phoenix, ongoing since 2000 [Dataset]. Environmental Data Initiative. https://doi.org/10.6073/PASTA/4777D7F0A899F506D6D4F9B5D535BA09
+
 
 ```{r read in the observation data}
 list.files("C:/Research/CAPLTER/data/core_birds")  
