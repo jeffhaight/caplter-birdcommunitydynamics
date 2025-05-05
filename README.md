@@ -1,4 +1,4 @@
-
+[![DOI](https://zenodo.org/badge/836942280.svg)](https://doi.org/10.5281/zenodo.15345959)
 
 # caplter-birdcommunitydynamics
 
