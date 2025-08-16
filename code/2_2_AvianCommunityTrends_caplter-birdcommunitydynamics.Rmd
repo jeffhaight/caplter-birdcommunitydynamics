@@ -50,7 +50,7 @@ gc()
 ```{r color palettes} 
 
   # import some color palettes to use for visualizing seasons
-  load("./data/arizonapalettes.RData")
+  load("~/GitHub/caplter-birdcommunitydynamics/data/arizonapalettes.RData")
   # Cool-Wet: color = 6, fill = 1
   # Hot-Dry spring: color = 2, fill = 3
   # Warm-Wet: color = 4, fill = 5
@@ -93,10 +93,10 @@ palette_ggdemo(sonoran)
 
 # Import Data
 ```{r, include = FALSE}
-list.files("./data")
+list.files("~/GitHub/caplter-birdcommunitydynamics/data")
 
 # This contains data assembled by the '2_1_StatisticalModelingSetup_CAPbirds' file
-load("./data/modelinputs_CAPbirds2024.RData")
+load("~/GitHub/caplter-birdcommunitydynamics/data/modelinputs_CAPbirds2024.RData")
 
 
 data.win$site_code <- as.factor(data.spr$site_code)
@@ -175,7 +175,7 @@ wilcox.test(abund_pollen ~ season, data = data.div)
   scale_color_manual(values = pal_season) +
   stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001, color = "black") +
   coord_cartesian(ylim = c(0,100)) +
-  labs(x = "Year", y = "Total Bird Abundance \n(#/survey)") +
+  labs(x = "Year", y = "Total Bird Abundance \n(no./survey)") +
   theme_bw()+
     theme(
     legend.position = "none",
@@ -193,7 +193,7 @@ wilcox.test(abund_pollen ~ season, data = data.div)
   # scale_fill_brewer(palette = "Dark2") +
   scale_fill_manual(values = pal_season) +
   coord_cartesian(ylim = c(0,65)) +
-  labs(x = "Year", y = "Total Bird Abundance \n(#/survey)") +
+  labs(x = "Year", y = "Total Bird Abundance \n(no./survey)") +
   theme(
     legend.position = "none",
     axis.text.x = element_text(angle = 40, vjust = 1, hjust=1, size = 14),
@@ -214,7 +214,7 @@ wilcox.test(abund_pollen ~ season, data = data.div)
   scale_color_manual(values = pal_season) +
   # stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001, color = "black") +
   coord_cartesian(ylim = c(0,40)) +
-  labs(x = "Year", y = "Total Bird Abundance \n(#/survey)") +
+  labs(x = "Year", y = "Total Bird Abundance \n(no./survey)") +
   theme_bw()+
     theme(
     legend.position = "none",
@@ -223,7 +223,7 @@ wilcox.test(abund_pollen ~ season, data = data.div)
     axis.title = element_text(face = "bold", size = 16)
   ))
 
-ggsave("./figures/trends_birds/trend_birds_abundance.png",
+ggsave("~/GitHub/caplter-birdcommunitydynamics/figures/trends_birds/trend_birds_abundance.png",
        plot.trend,
        width = 6,
        height = 4,
@@ -239,7 +239,7 @@ ggsave("./figures/trends_birds/trend_birds_abundance.png",
   scale_color_manual(values = pal_season) +
   # stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001, color = "black") +
   # coord_cartesian(ylim = c(0,100)) +
-  labs(x = "Year", y = "Species Richness \n(#/survey)") +
+  labs(x = "Year", y = "Species Richness \n(no./survey)") +
   theme_bw()+
     theme(
     legend.position = "none",
@@ -258,7 +258,7 @@ ggsave("./figures/trends_birds/trend_birds_abundance.png",
   # scale_fill_brewer(palette = "Dark2") +
   scale_fill_manual(values = pal_season) +
   coord_cartesian(ylim = c(0,30)) +
-  labs(x = "Year", y = "Species Richness \n(#/survey)") +
+  labs(x = "Year", y = "Species Richness \n(no./survey)") +
   theme(
     legend.position = "none",
     axis.text.x = element_text(angle = 40, vjust = 1, hjust=1, size = 14),
@@ -279,7 +279,7 @@ ggsave("./figures/trends_birds/trend_birds_abundance.png",
   scale_color_manual(values = pal_season) +
   # stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001, color = "black") +
   coord_cartesian(ylim = c(0,20)) +
-  labs(x = "Year", y = "Species Richness \n(#/survey)") +
+  labs(x = "Year", y = "Species Richness \n(no./survey)") +
   theme_bw()+
     theme(
     legend.position = "none",
@@ -289,7 +289,7 @@ ggsave("./figures/trends_birds/trend_birds_abundance.png",
   ))
 
 
-ggsave("./figures/trends_birds/trend_birds_richness.png",
+ggsave("~/GitHub/caplter-birdcommunitydynamics/figures/trends_birds/trend_birds_richness.png",
        plot.trend,
        width = 6,
        height = 4,
@@ -306,7 +306,7 @@ ggsave("./figures/trends_birds/trend_birds_richness.png",
   scale_color_manual(values = pal_season) +
   # stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001, color = "black") +
   coord_cartesian(ylim = c(0,40)) +
-  labs(x = "Year", y = "Seed Disperser Abundance \n(#/survey)") +
+  labs(x = "Year", y = "Seed Disperser Abundance \n(no./survey)") +
   theme_bw()+
     theme(
     legend.position = "none",
@@ -325,7 +325,7 @@ ggsave("./figures/trends_birds/trend_birds_richness.png",
   # scale_fill_brewer(palette = "Dark2") +
   scale_fill_manual(values = pal_season) +
   coord_cartesian(ylim = c(0,45)) +
-  labs(x = "Year", y = "Seed Disperser Abundance \n(#/survey)") +
+  labs(x = "Year", y = "Seed Disperser Abundance \n(no./survey)") +
   theme(
     legend.position = "none",
     axis.text.x = element_text(angle = 40, vjust = 1, hjust=1, size = 14),
@@ -347,7 +347,7 @@ ggsave("./figures/trends_birds/trend_birds_richness.png",
   scale_color_manual(values = pal_season) +
   # stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001, color = "black") +
   coord_cartesian(ylim = c(0,40)) +
-  labs(x = "Year", y = "Seed Disperser Abundance \n(#/survey)") +
+  labs(x = "Year", y = "Seed Disperser Abundance \n(no./survey)") +
   theme_bw()+
     theme(
     legend.position = "none",
@@ -356,7 +356,7 @@ ggsave("./figures/trends_birds/trend_birds_richness.png",
     axis.title = element_text(face = "bold", size = 16)
   ))
 
-ggsave("./figures/trends_birds/trend_birds_seeddisp_abundance.png",
+ggsave("~/GitHub/caplter-birdcommunitydynamics/figures/trends_birds/trend_birds_seeddisp_abundance.png",
        plot.trend,
        width = 6,
        height = 4,
@@ -374,7 +374,7 @@ ggsave("./figures/trends_birds/trend_birds_seeddisp_abundance.png",
   scale_color_manual(values = pal_season) +
   # stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001, color = "black") +
   coord_cartesian(ylim = c(0,40)) +
-  labs(x = "Year", y = "Insectivore Abundance \n(#/survey)") +
+  labs(x = "Year", y = "Insectivore Abundance \n(no./survey)") +
   theme_bw()+
     theme(
     legend.position = "none",
@@ -392,7 +392,7 @@ ggsave("./figures/trends_birds/trend_birds_seeddisp_abundance.png",
   # scale_fill_brewer(palette = "Dark2") +
   scale_fill_manual(values = pal_season) +
   coord_cartesian(ylim = c(0,40)) +
-  labs(x = "Year", y = "Insectivore Abundance \n(#/survey)") +
+  labs(x = "Year", y = "Insectivore Abundance \n(no./survey)") +
   theme(
     legend.position = "none",
     axis.text.x = element_text(angle = 40, vjust = 1, hjust=1, size = 14),
@@ -414,7 +414,7 @@ ggsave("./figures/trends_birds/trend_birds_seeddisp_abundance.png",
   # scale_color_brewer(palette = "Dark2") +
   scale_color_manual(values = pal_season) +
   coord_cartesian(ylim = c(0,40)) +
-  labs(x = "Year", y = "Insectivore Abundance \n(#/survey)") +
+  labs(x = "Year", y = "Insectivore Abundance \n(no./survey)") +
   theme_bw()+
     theme(
     legend.position = "none",
@@ -425,7 +425,7 @@ ggsave("./figures/trends_birds/trend_birds_seeddisp_abundance.png",
 )
 
 
-ggsave("./figures/trends_birds/trend_birds_invert_abundance.png",
+ggsave("~/GitHub/caplter-birdcommunitydynamics/figures/trends_birds/trend_birds_invert_abundance.png",
        plot.trend,
        width = 6,
        height = 4,
@@ -467,7 +467,7 @@ data.div %>%
   # scale_fill_brewer(palette = "Dark2") +
   scale_fill_manual(values = pal_season) +
   coord_cartesian(ylim = c(0,4)) +
-  labs(x = "Year", y = "Pollinator Abundance \n(#/survey)") +
+  labs(x = "Year", y = "Pollinator Abundance \n(no./survey)") +
   theme(
     legend.position = "none",
     axis.text.x = element_text(angle = 40, vjust = 1, hjust=1, size = 14),
@@ -489,7 +489,7 @@ data.div %>%
   scale_color_manual(values = pal_season, labels = c("Winter", "Spring")) +
   # stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001, color = "black") +
   coord_cartesian(ylim = c(0.05,4)) +
-  labs(x = "Year", y = "Pollinator Abundance \n(#/survey)", color = "Season") +
+  labs(x = "Year", y = "Pollinator Abundance \n(no./survey)", color = "Season") +
   theme_bw()+
     theme(
     # legend.position = "none",
@@ -499,7 +499,7 @@ data.div %>%
   ))
 
 
-ggsave("./figures/trends_birds/trend_birds_pollinator_abundance.png",
+ggsave("~/GitHub/caplter-birdcommunitydynamics/figures/trends_birds/trend_birds_pollinator_abundance.png",
        plot.trend,
        width = 6,
        height = 4,
@@ -528,7 +528,7 @@ max(div.reg$n_site_reg)
   geom_point(alpha = 0.3) +
   # stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001, color = "black") +
   # coord_cartesian(ylim = c(0, 5)) +
-  labs(x = "Year", y = "Gamma Diversity \n(# of species)", color = "Season") +
+  labs(x = "Year", y = "Gamma Diversity \n(no. of species)", color = "Season") +
   theme_bw()+
     theme(
     # legend.position = "none",
@@ -538,7 +538,7 @@ max(div.reg$n_site_reg)
   ))
 
 
-ggsave("./figures/trends_birds/trend_birds_regionalrichness.png",
+ggsave("~/GitHub/caplter-birdcommunitydynamics/figures/trends_birds/trend_birds_regionalrichness.png",
        plot.trend,
        width = 6,
        height = 4,
@@ -555,7 +555,7 @@ ggsave("./figures/trends_birds/trend_birds_regionalrichness.png",
   scale_color_manual(values = pal_season, labels = c("Winter", "Spring")) +
   # stat_cor(method = "spearman", cor.coef.name = "rho", p.accuracy = 0.001, r.accuracy = 0.001, color = "black") +
   # coord_cartesian(ylim = c(0, 5)) +
-  labs(x = "Year", y = "Regional Average Total Bird Abundance \n(# of species)", color = "Season") +
+  labs(x = "Year", y = "Regional Average Total Bird Abundance \n(no. of species)", color = "Season") +
   theme_bw()+
     theme(
     # legend.position = "none",
